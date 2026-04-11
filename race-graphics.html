@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Race Visualization</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="post-position-colors.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .race-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .race-info h2 {
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+
+        .race-details {
+            font-size: 1em;
+            opacity: 0.9;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            background: #f8f9fa;
+            padding: 15px 20px 10px 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-container h3 {
+            color: #333;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .horses-table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .horses-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .horses-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .horses-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.85em;
+        }
+
+        .horses-table tbody tr:hover {
+            background: #f0f4ff;
+        }
+
+        .horses-table tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .horses-table tbody tr:nth-child(even):hover {
+            background: #f0f4ff;
+        }
+
+        .btn-back {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .btn-back:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="btn-back" onclick="window.close()">← Back to Race List</button>
+        
+        <div class="header">
+            <h1>🏇 Race Visualization</h1>
+        </div>
+
+        <div class="race-info" id="raceInfo">
+            <h2 id="raceTitle">Loading...</h2>
+            <div class="race-details" id="raceDetails"></div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                
+                <canvas id="speedChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="earningsChart"></canvas>
+            </div>
+            <div class="chart-container">
+
+                <canvas id="winPercentChart"></canvas>
+            </div>
+            <div class="chart-container">
+        
+                <canvas id="recentFormChart"></canvas>
+            </div>
+        </div>
+
+
+    <script>
+        // Load race data from sessionStorage
+        const raceData = JSON.parse(sessionStorage.getItem('currentRaceData'));
+        const allData = JSON.parse(sessionStorage.getItem('allRacesData'));
+
+    
+
+    // Track code to name mapping
+    const trackMapping = {
+        "DMR": "Del Mar", "DED": "Delta Downs", "AQU": "Aqueduct", "AP": "Arlington Park",
+        "BC": "Breeders Cup", "BEL": "Belmont Park", "BEU": "Beulah Park", "BM": "Bay Meadows",
+        "CBY": "Canterbury Park", "CD": "Churchill Downs", "CLS": "Columbus", "CNL": "Colonial Downs",
+        "CRC": "Calder Race Course", "CT": "Charles Town", "DEL": "Delaware Park", "ELP": "Ellis Park",
+        "EMD": "Emerald Downs", "EVD": "Evangeline Downs", "FE": "Fort Erie", "FG": "Fair Grounds",
+        "FPK": "Fairmount Park", "FPZ": "OLDFairplex", "GG": "Golden Gate Fields", "GLD": "Great Lakes Down",
+        "GP": "Gulfstream Park", "GS": "Garden State", "HAW": "Hawthorne", "HIA": "Hialeah Park",
+        "FMT": "Fair Meadows Tulsa", "HOZ": "OLDHoosier", "HOL": "Hollywood Park OLD", "HOO": "Hoosier",
+        "HOU": "Sam Houston Park", "HST": "Hastings Park", "IND": "Indiana Grand Race Course", "KEE": "Keeneland",
+        "LA": "Los Alamitos Qh", "LAZ": "OLDLos Alamitos", "LAD": "Louisiana Downs", "LRL": "Laurel Park",
+        "LS": "Lone Star Park", "MAG": "Magna Pick 5", "MED": "Meadowlands", "MNR": "Mountaineer",
+        "MTH": "Monmouth Park", "OP": "Oaklawn Park", "OSA": "Oak Tree (santa Anita)", "PEN": "Penn National",
+        "PHA": "Philadelphia Park", "PIM": "Pimlico", "PLN": "Pleasanton", "PM": "Portland Meadows",
+        "PRM": "Prairie Meadows", "RD": "River Downs", "RET": "Retama Park", "RKM": "Rockingham Park",
+        "RP": "Remington Park", "SA": "Santa Anita Park", "SAR": "Saratoga", "SOL": "Solana, CA",
+        "SPT": "Sportsman Park", "SUF": "Suffolk Downs", "SUN": "Sunland Park", "TAM": "Tampa Bay Downs",
+        "TDN": "Thistledown", "TIM": "Timonium", "TP": "Turfway Park", "TUP": "Turf Paradise",
+        "WO": "Woodbine", "WOZ": "OLDWoodbine Canada", "YAV": "Yavapai", "ZIA": "Zia Park",
+        "DG": "Cochise Co. Fair @ Douglas", "EMT": "Emmett", "FL": "Finger Lakes", "FON": "Fonner Park",
+        "FTP": "Fort Pierre", "MAN": "Manor Downs", "NPF": "Premier Pick 4", "STP": "Stampede Park",
+        "SUD": "Sun Downs", "SRP": "Sun Ray", "WRD": "Will Rogers Downs", "ASD": "Assiniboia Downs",
+        "BCF": "Brown County Fair", "BOI": "Les Bois Park", "LBG": "Lethbridge", "LNN": "Lincoln State Fair",
+        "MC": "Miles City", "MOF": "Mohave County Fair", "MPM": "Mount Pleasant Meadows", "POD": "Pocatello Downs",
+        "PID": "Presque Isle Downs", "WW": "Walla Walla", "WTS": "Waitsburg Race Track", "TAB": "Twinspires.com Contest",
+        "RUI": "Ruidoso Downs", "BRD": "Blue Ribbon Downs", "DUB": "Dubai", "OTH": "Oak Tree (HOLLYWOOD)",
+        "PRX": "Parx Racing", "FPX": "Fairplex", "BHP": "Hollywood Park", "BTP": "Belterra Park",
+        "NP": "Northlands Park", "JP": "Jackpot 5", "AJ": "Ajax Downs", "ARP": "Arapahoe Park",
+        "KD": "Kentucky Downs", "GPW": "Gulfstream Park West", "LRC": "Los Alamitos Tb", "MVR": "Mahoning Valley Racecourse"
+    };
+
+    function getTrackName(trackCode) {
+        const trimmedCode = (trackCode || '').trim().toUpperCase();
+        return trackMapping[trimmedCode] || trackCode;
+    }
+
+    if (!raceData) {
+            document.getElementById('raceTitle').textContent = 'No race data available';
+            alert('No race data found. Please select a race from the main page.');
+        } else {
+            displayRaceGraphics();
+        }
+
+
+            function displayRaceGraphics() {
+            // Display race info
+            const trackName = getTrackName(raceData.trackCode);
+            document.getElementById('raceTitle').textContent = 
+            `${trackName} - Race ${raceData.raceNumber}`;
+            document.getElementById('raceDetails').textContent = 
+            `${raceData.distanceInFurlongs} ${raceData.surface} | ${raceData.classification} | ${raceData.horses.length} Horses | $${formatNumber(raceData.purse)} Purse`;
+
+            // Prepare data for charts
+            const horses = raceData.horses.sort((a, b) => a.postPosition - b.postPosition);
+                                                
+            // Create BRIS 2F Pace Figure Chart
+            createBRIS2FPaceChart('speedChart', horses);
+
+            // Create Last Call Pace Figure Chart
+            createLastCallPaceChart('earningsChart', horses, raceData.distanceInFurlongs);
+
+            // Create BRIS Late Pace Figure Chart
+            createBRISLatePaceChart('winPercentChart', horses);
+
+            // Create BRIS Speed Rating Chart
+            createBRISSpeedRatingChart('recentFormChart', horses);
+
+
+        }
+
+        function createBRIS2FPaceChart(canvasId, horses) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            // Prepare data for each horse
+            const labels = [];
+            const barData = [];
+            const avgLineData = [];
+            const lastLineData = [];
+            const colors = [];
+            const borderColors = [];
+            
+            horses.forEach(horse => {
+                const paceFigures = [];
+                
+                // Extract BRIS 2F Pace Figures from past performances
+                if (horse.pastPerformances && horse.pastPerformances.length > 0) {
+                    horse.pastPerformances.forEach(pp => {
+                        const pace = parseInt(pp.paceFig2F);
+                        if (!isNaN(pace) && pace > 0) {
+                            paceFigures.push(pace);
+                        }
+                    });
+                }
+                
+                // Calculate statistics
+                let min = 0, max = 0, avg = 0, last = 0;
+                
+                if (paceFigures.length > 0) {
+                    min = Math.min(...paceFigures);
+                    max = Math.max(...paceFigures);
+                    avg = Math.round(paceFigures.reduce((a, b) => a + b, 0) / paceFigures.length);
+                    last = paceFigures[0]; // First in array is most recent
+                }
+                
+                // Get post position color
+                const postPos = parseInt(horse.postPosition) || 1;
+                const colorConfig = getPostPositionColor(postPos);
+                
+                // Add to arrays
+                labels.push(`#${postPos} ${horse.horseName}`);
+                barData.push([min, max]); // Bar from min to max
+                avgLineData.push(avg);
+                lastLineData.push(last);
+                colors.push(colorConfig.background);
+                borderColors.push(colorConfig.border);
+            });
+            
+            // Calculate Y-axis minimum (round down to nearest 10)
+            const allMins = barData.map(d => d[0]).filter(v => v > 0);
+            const lowestMin = allMins.length > 0 ? Math.min(...allMins) : 0;
+            const yAxisMin = Math.floor(lowestMin / 10) * 10;
+            
+            // Create chart with floating bars and overlay points (no lines)
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Min-Max Range',
+                            data: barData,
+                            backgroundColor: colors.map(c => c + '80'), // Add transparency
+                            borderColor: borderColors,
+                            borderWidth: 2,
+                            barPercentage: 0.7
+                        },
+                        {
+                            label: 'Average',
+                            data: avgLineData,
+                            type: 'line',
+                            borderColor: '#FF6B6B',
+                            borderWidth: 0,
+                            borderDash: [10, 5],
+                            pointRadius: 7,
+                            pointBackgroundColor: '#FF6B6B',
+                            pointBorderColor: '#FFFFFF',
+                            pointBorderWidth: 2,
+                            pointStyle: 'circle',
+                            fill: false,
+                            showLine: false,
+                            order: 1
+                        },
+                        {
+                            label: 'Last Race',
+                            data: lastLineData,
+                            type: 'line',
+                            borderColor: '#4ECDC4',
+                            borderWidth: 0,
+                            pointRadius: 7,
+                            pointBackgroundColor: '#4ECDC4',
+                            pointBorderColor: '#FFFFFF',
+                            pointBorderWidth: 2,
+                            pointStyle: 'circle',
+                            fill: false,
+                            showLine: false,
+                            order: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const datasetLabel = context.dataset.label || '';
+                                    if (datasetLabel === 'Min-Max Range') {
+                                        const value = context.parsed.y;
+                                        const raw = context.raw;
+                                        return `Min: ${raw[0]}, Max: ${raw[1]}`;
+                                    }
+                                    return `${datasetLabel}: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: yAxisMin,
+                            title: {
+                                display: true,
+                                text: 'BRIS 2F Pace Figure',
+                                font: {
+                                    size: 11,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 9
+                                },
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createLastCallPaceChart(canvasId, horses, distanceInFurlongs) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            // Get the last call configuration based on race distance
+            const lastCallConfig = getLastCallConfig(distanceInFurlongs);
+            const lastCallField = lastCallConfig.fieldName;
+            
+            // Prepare data for each horse
+            const labels = [];
+            const barData = [];
+            const avgLineData = [];
+            const lastLineData = [];
+            const colors = [];
+            const borderColors = [];
+            
+            horses.forEach(horse => {
+                const paceFigures = [];
+                
+                // Extract Last Call Pace Figures from past performances
+                if (horse.pastPerformances && horse.pastPerformances.length > 0) {
+                    horse.pastPerformances.forEach(pp => {
+                        const pace = parseInt(pp[lastCallField]);
+                        if (!isNaN(pace) && pace > 0) {
+                            paceFigures.push(pace);
+                        }
+                    });
+                }
+                
+                // Calculate statistics
+                let min = 0, max = 0, avg = 0, last = 0;
+                
+                if (paceFigures.length > 0) {
+                    min = Math.min(...paceFigures);
+                    max = Math.max(...paceFigures);
+                    avg = Math.round(paceFigures.reduce((a, b) => a + b, 0) / paceFigures.length);
+                    last = paceFigures[0]; // First in array is most recent
+                }
+                
+                // Get post position color
+                const postPos = parseInt(horse.postPosition) || 1;
+                const colorConfig = getPostPositionColor(postPos);
+                
+                // Add to arrays
+                labels.push(`#${postPos} ${horse.horseName}`);
+                barData.push([min, max]); // Bar from min to max
+                avgLineData.push(avg);
+                lastLineData.push(last);
+                colors.push(colorConfig.background);
+                borderColors.push(colorConfig.border);
+            });
+            
+            // Calculate Y-axis minimum (round down to nearest 10)
+            const allMins = barData.map(d => d[0]).filter(v => v > 0);
+            const lowestMin = allMins.length > 0 ? Math.min(...allMins) : 0;
+            const yAxisMin = Math.floor(lowestMin / 10) * 10;
+            
+            // Create chart with floating bars and overlay points (no lines)
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Min-Max Range',
+                            data: barData,
+                            backgroundColor: colors.map(c => c + '80'), // Add transparency
+                            borderColor: borderColors,
+                            borderWidth: 2,
+                            barPercentage: 0.7
+                        },
+                        {
+                            label: 'Average',
+                            data: avgLineData,
+                            type: 'line',
+                            borderColor: '#FF6B6B',
+                            borderWidth: 0,
+                            borderDash: [10, 5],
+                            pointRadius: 7,
+                            pointBackgroundColor: '#FF6B6B',
+                            pointBorderColor: '#FFFFFF',
+                            pointBorderWidth: 2,
+                            pointStyle: 'circle',
+                            fill: false,
+                            showLine: false,
+                            order: 1
+                        },
+                        {
+                            label: 'Last Race',
+                            data: lastLineData,
+                            type: 'line',
+                            borderColor: '#4ECDC4',
+                            borderWidth: 0,
+                            pointRadius: 7,
+                            pointBackgroundColor: '#4ECDC4',
+                            pointBorderColor: '#FFFFFF',
+                            pointBorderWidth: 2,
+                            pointStyle: 'circle',
+                            fill: false,
+                            showLine: false,
+                            order: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const datasetLabel = context.dataset.label || '';
+                                    if (datasetLabel === 'Min-Max Range') {
+                                        const value = context.parsed.y;
+                                        const raw = context.raw;
+                                        return `Min: ${raw[0]}, Max: ${raw[1]}`;
+                                    }
+                                    return `${datasetLabel}: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: yAxisMin,
+                            title: {
+                                display: true,
+                                text: `${lastCallConfig.description}`,
+                                font: {
+                                    size: 11,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 9
+                                },
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createBRISLatePaceChart(canvasId, horses) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            // Prepare data for each horse
+            const labels = [];
+            const barData = [];
+            const avgLineData = [];
+            const lastLineData = [];
+            const colors = [];
+            const borderColors = [];
+            
+            horses.forEach(horse => {
+                const paceFigures = [];
+                
+                // Extract BRIS Late Pace Figures from past performances
+                if (horse.pastPerformances && horse.pastPerformances.length > 0) {
+                    horse.pastPerformances.forEach(pp => {
+                        const pace = parseInt(pp.paceFigLate);
+                        if (!isNaN(pace) && pace > 0) {
+                            paceFigures.push(pace);
+                        }
+                    });
+                }
+                
+                // Calculate statistics
+                let min = 0, max = 0, avg = 0, last = 0;
+                
+                if (paceFigures.length > 0) {
+                    min = Math.min(...paceFigures);
+                    max = Math.max(...paceFigures);
+                    avg = Math.round(paceFigures.reduce((a, b) => a + b, 0) / paceFigures.length);
+                    last = paceFigures[0]; // First in array is most recent
+                }
+                
+                // Get post position color
+                const postPos = parseInt(horse.postPosition) || 1;
+                const colorConfig = getPostPositionColor(postPos);
+                
+                // Add to arrays
+                labels.push(`#${postPos} ${horse.horseName}`);
+                barData.push([min, max]); // Bar from min to max
+                avgLineData.push(avg);
+                lastLineData.push(last);
+                colors.push(colorConfig.background);
+                borderColors.push(colorConfig.border);
+            });
+            
+            // Calculate Y-axis minimum (round down to nearest 10)
+            const allMins = barData.map(d => d[0]).filter(v => v > 0);
+            const lowestMin = allMins.length > 0 ? Math.min(...allMins) : 0;
+            const yAxisMin = Math.floor(lowestMin / 10) * 10;
+            
+            // Create chart with floating bars and overlay points (no lines)
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Min-Max Range',
+                            data: barData,
+                            backgroundColor: colors.map(c => c + '80'), // Add transparency
+                            borderColor: borderColors,
+                            borderWidth: 2,
+                            barPercentage: 0.7
+                        },
+                        {
+                            label: 'Average',
+                            data: avgLineData,
+                            type: 'line',
+                            borderColor: '#FF6B6B',
+                            borderWidth: 0,
+                            borderDash: [10, 5],
+                            pointRadius: 7,
+                            pointBackgroundColor: '#FF6B6B',
+                            pointBorderColor: '#FFFFFF',
+                            pointBorderWidth: 2,
+                            pointStyle: 'circle',
+                            fill: false,
+                            showLine: false,
+                            order: 1
+                        },
+                        {
+                            label: 'Last Race',
+                            data: lastLineData,
+                            type: 'line',
+                            borderColor: '#4ECDC4',
+                            borderWidth: 0,
+                            pointRadius: 7,
+                            pointBackgroundColor: '#4ECDC4',
+                            pointBorderColor: '#FFFFFF',
+                            pointBorderWidth: 2,
+                            pointStyle: 'circle',
+                            fill: false,
+                            showLine: false,
+                            order: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const datasetLabel = context.dataset.label || '';
+                                    if (datasetLabel === 'Min-Max Range') {
+                                        const value = context.parsed.y;
+                                        const raw = context.raw;
+                                        return `Min: ${raw[0]}, Max: ${raw[1]}`;
+                                    }
+                                    return `${datasetLabel}: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: yAxisMin,
+                            title: {
+                                display: true,
+                                text: 'BRIS Late Pace Figure',
+                                font: {
+                                    size: 11,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 9
+                                },
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createBRISSpeedRatingChart(canvasId, horses) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            // Prepare data for each horse
+            const labels = [];
+            const barData = [];
+            const avgLineData = [];
+            const lastLineData = [];
+            const colors = [];
+            const borderColors = [];
+            
+            horses.forEach(horse => {
+                const speedRatings = [];
+                
+                // Extract BRIS Speed Ratings from past performances
+                if (horse.pastPerformances && horse.pastPerformances.length > 0) {
+                    horse.pastPerformances.forEach(pp => {
+                        const speed = parseInt(pp.paceFigSpeed);
+                        if (!isNaN(speed) && speed > 0) {
+                            speedRatings.push(speed);
+                        }
+                    });
+                }
+                
+                // Calculate statistics
+                let min = 0, max = 0, avg = 0, last = 0;
+                
+                if (speedRatings.length > 0) {
+                    min = Math.min(...speedRatings);
+                    max = Math.max(...speedRatings);
+                    avg = Math.round(speedRatings.reduce((a, b) => a + b, 0) / speedRatings.length);
+                    last = speedRatings[0]; // First in array is most recent
+                }
+                
+                // Get post position color
+                const postPos = parseInt(horse.postPosition) || 1;
+                const colorConfig = getPostPositionColor(postPos);
+                
+                // Add to arrays
+                labels.push(`#${postPos} ${horse.horseName}`);
+                barData.push([min, max]); // Bar from min to max
+                avgLineData.push(avg);
+                lastLineData.push(last);
+                colors.push(colorConfig.background);
+                borderColors.push(colorConfig.border);
+            });
+            
+            // Calculate Y-axis minimum (round down to nearest 10)
+            const allMins = barData.map(d => d[0]).filter(v => v > 0);
+            const lowestMin = allMins.length > 0 ? Math.min(...allMins) : 0;
+            const yAxisMin = Math.floor(lowestMin / 10) * 10;
+            
+            // Create chart with floating bars and overlay points (no lines)
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Min-Max Range',
+                            data: barData,
+                            backgroundColor: colors.map(c => c + '80'), // Add transparency
+                            borderColor: borderColors,
+                            borderWidth: 2,
+                            barPercentage: 0.7
+                        },
+                        {
+                            label: 'Average',
+                            data: avgLineData,
+                            type: 'line',
+                            borderColor: '#FF6B6B',
+                            borderWidth: 0,
+                            borderDash: [10, 5],
+                            pointRadius: 7,
+                            pointBackgroundColor: '#FF6B6B',
+                            pointBorderColor: '#FFFFFF',
+                            pointBorderWidth: 2,
+                            pointStyle: 'circle',
+                            fill: false,
+                            showLine: false,
+                            order: 1
+                        },
+                        {
+                            label: 'Last Race',
+                            data: lastLineData,
+                            type: 'line',
+                            borderColor: '#4ECDC4',
+                            borderWidth: 0,
+                            pointRadius: 7,
+                            pointBackgroundColor: '#4ECDC4',
+                            pointBorderColor: '#FFFFFF',
+                            pointBorderWidth: 2,
+                            pointStyle: 'circle',
+                            fill: false,
+                            showLine: false,
+                            order: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const datasetLabel = context.dataset.label || '';
+                                    if (datasetLabel === 'Min-Max Range') {
+                                        const value = context.parsed.y;
+                                        const raw = context.raw;
+                                        return `Min: ${raw[0]}, Max: ${raw[1]}`;
+                                    }
+                                    return `${datasetLabel}: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: yAxisMin,
+                            title: {
+                                display: true,
+                                text: 'BRIS Speed Rating',
+                                font: {
+                                    size: 11,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 9
+                                },
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+
+        function formatNumber(numStr) {
+            const num = parseFloat(numStr) || 0;
+            return num.toLocaleString();
+        }
+            </script>
+            </body>
+            </html>

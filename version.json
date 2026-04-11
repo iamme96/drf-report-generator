@@ -1,0 +1,8 @@
+{
+  "version": "1.2.0",
+  "releaseDate": "2026-03-02",
+  "downloadURL": "https://yourdomain.com/updates/DRF-Report-Generator-v1.2.0.zip",
+  "changelog": "• Updated *P formula to use PP Speed Rating\n• Fixed PP section alignment\n• Improved column width distribution",
+  "critical": false,
+  "minVersion": "1.0.0"
+}

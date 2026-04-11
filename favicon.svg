@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Background circle with racing green -->
+  <circle cx="50" cy="50" r="50" fill="#1a472a"/>
+  
+  <!-- Horse silhouette in white/gold -->
+  <text x="50" y="50" font-size="60" text-anchor="middle" dominant-baseline="central" fill="#FFD700">🏇</text>
+</svg>
