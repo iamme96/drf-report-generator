@@ -488,7 +488,7 @@ class DRFPDFGenerator {
         this.doc.text('Name', x + 5, y);
         const prLabelText = "PR(C)";
         const prLabelWidth = this.doc.getTextWidth(prLabelText);
-        this.doc.text(prLabelText, x + colWidths[0] - prLabelWidth - 5, y);
+        this.doc.text(prLabelText, x + colWidths[0] - prLabelWidth - 4, y);
         y += lineHeight;
 
         // Line 3: 4 sections - Age, Sex, Eqp, Med (evenly spaced)
@@ -754,12 +754,12 @@ class DRFPDFGenerator {
             );
         
         // Line 2: Name (left-aligned) and PR(C) score (right-aligned)
-        const name = this.truncate(horse.horseName || '', 25);
+        const name = this.truncate(horse.horseName || '', 18);
         this.doc.text(name, x + 5, y);
         
                 // Display PR(C) score on the right side (without label)
                 const prWidth = this.doc.getTextWidth(prScore);
-                this.doc.text(prScore, x + colWidths[0] - prWidth - 5, y);
+                this.doc.text(prScore, x + colWidths[0] - prWidth - 4, y);
                 y += lineHeight;
 
                 // Line 3: 4 sections - Age, Sex, Eqp, Med (centered in each section)
