@@ -733,10 +733,32 @@ class DRFPDFGenerator {
         this.doc.text(ml, x + col1Line1SectionWidth * 4 + (col1Line1SectionWidth - this.doc.getTextWidth(ml)) / 2, y);
         y += lineHeight;
 
-        // Line 2: Name (single section, left-aligned with padding)
-        const name = this.truncate(horse.horseName || '', 25);
-        this.doc.text(name, x + 5, y);
-        y += lineHeight;
+            // Calculate PR(C) score for display on Line 2
+            // Get normalized values for this horse
+            const normalizedPR = this.calculateNormalizedPR(horse, race);
+            const normalizedMoneyMR = this.calculateNormalizedMoneyMR(horse, race);
+            const normalizedJockeyMR = this.calculateNormalizedJockeyMR(horse, race);
+            const normalizedTrainerMR = this.calculateNormalizedTrainerMR(horse, race);
+            const normalizedSpeedMR = this.calculateNormalizedSpeedMR(horse, race);
+            const normalizedAvgPar = this.calculateNormalizedAvgPar(horse, race);
+            const prScore = this.calculatePRScore(
+                normalizedPR,
+                normalizedMoneyMR,
+                normalizedJockeyMR,
+                normalizedTrainerMR,
+                normalizedSpeedMR,
+                normalizedAvgPar
+            );
+        
+            // Line 2: Name (left-aligned) and PR(C) score (right-aligned)
+            const name = this.truncate(horse.horseName || '', 25);
+            this.doc.text(name, x + 5, y);
+            
+            // Display PR(C) on the right side
+            const prLabel = 'PR: ';
+            const prText = prLabel + prScore;
+            const prWidth = this.doc.getTextWidth(prText);
+    this.doc.text(prText, x + colWidths[0] - prWidth - 5, y);
 
         // Line 3: 4 sections - Age, Sex, Eqp, Med (centered in each section)
         const age = String(horse.age || '');
