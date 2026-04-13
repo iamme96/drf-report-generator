@@ -486,6 +486,9 @@ class DRFPDFGenerator {
 
         // Line 2: Name (single section, left-aligned with padding)
         this.doc.text('Name', x + 5, y);
+        const prLabelText = "PR(C)";
+        const prLabelWidth = this.doc.getTextWidth(prLabelText);
+        this.doc.text(prLabelText, x + colWidths[0] - prLabelWidth - 5, y);
         y += lineHeight;
 
         // Line 3: 4 sections - Age, Sex, Eqp, Med (evenly spaced)
@@ -750,19 +753,18 @@ class DRFPDFGenerator {
                 normalizedAvgPar
             );
         
-            // Line 2: Name (left-aligned) and PR(C) score (right-aligned)
-            const name = this.truncate(horse.horseName || '', 25);
-            this.doc.text(name, x + 5, y);
-            
-            // Display PR(C) on the right side
-            const prLabel = 'PR: ';
-            const prText = prLabel + prScore;
-            const prWidth = this.doc.getTextWidth(prText);
-    this.doc.text(prText, x + colWidths[0] - prWidth - 5, y);
+        // Line 2: Name (left-aligned) and PR(C) score (right-aligned)
+        const name = this.truncate(horse.horseName || '', 25);
+        this.doc.text(name, x + 5, y);
+        
+                // Display PR(C) score on the right side (without label)
+                const prWidth = this.doc.getTextWidth(prScore);
+                this.doc.text(prScore, x + colWidths[0] - prWidth - 5, y);
+                y += lineHeight;
 
-        // Line 3: 4 sections - Age, Sex, Eqp, Med (centered in each section)
-        const age = String(horse.age || '');
-        const sex = String(horse.sex || '');
+                // Line 3: 4 sections - Age, Sex, Eqp, Med (centered in each section)
+                const age = String(horse.age || '');
+                const sex = String(horse.sex || '');
         const eqp = String(horse.equipment || '');
         const med = String(horse.medication || '');
         const col1Line3SectionWidth = colWidths[0] / 4;
