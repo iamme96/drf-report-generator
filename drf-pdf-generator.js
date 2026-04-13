@@ -625,7 +625,7 @@ class DRFPDFGenerator {
         // Line 4: All 12 section labels
         y += lineHeight;
         this.doc.text('P-T-C', sectionX + 2, y);
-        this.doc.text('Par', sectionX + section1Width + 4, y);
+        this.doc.text('Par', sectionX + section1Width + 7, y);
         this.doc.text('D-Sf-Cd-Cg', sectionX + section1Width + section2Width + 2, y);
         this.doc.text('DO', sectionX + section1Width + section2Width + section3Width + 2, y);
         // Center "Rank" label in Section 5
@@ -940,7 +940,7 @@ class DRFPDFGenerator {
 
                 // Display Sections 1-4
                 this.doc.text(String(ptc), sectionX + 2, y);
-                this.doc.text(String(par), sectionX + section1Width + 4, y);
+                this.doc.text(String(par), sectionX + section1Width + 7, y);
                 this.doc.text(String(dsfcdcg), sectionX + section1Width + section2Width + 2, y);
                 this.doc.text(String(daysOff), sectionX + section1Width + section2Width + section3Width + 2, y);
 
