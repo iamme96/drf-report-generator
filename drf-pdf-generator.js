@@ -208,48 +208,53 @@ class DRFPDFGenerator {
     /**
      * Generate PDF report from DRF data
      */
-    generateReport(data, filename = 'race-report.pdf') {
-        const { jsPDF } = window.jspdf;
-        this.doc = new jsPDF({
-            orientation: 'landscape',
-            unit: 'pt',
-            format: 'letter'
-        });
-
-        // Generate a page for each race
-        data.races.forEach((race, index) => {
-            if (index > 0) {
-                this.doc.addPage();
-            }
-            this.currentY = this.margin;
-            this.generateRacePage(race, data.trackCode, data.date);
-        });
-
-        // Save the PDF
+        generateReport(data, filename = 'race-report.pdf', includeStatsPage = false) {
+            const { jsPDF } = window.jspdf;
+            this.doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'pt',
+                format: 'letter'
+            });
+    
+            // Generate a page for each race
+            data.races.forEach((race, index) => {
+                if (index > 0) {
+                    this.doc.addPage();
+                }
+                this.currentY = this.margin;
+                this.generateRacePage(race, data.trackCode, data.date, includeStatsPage);
+            });
+    
+            // Save the PDF
+            this.doc.save(filename);
+    }
         this.doc.save(filename);
     }
-
-
-
+    
+    
     /**
      * Generate a single race page
      */
-    generateRacePage(race, track, date) {
+    generateRacePage(race, track, date, includeStatsPage = false) {
         // Race header
         this.addRaceHeader(race, track, date);
-
+    
         // Horse details table with 8 sections
         this.addHorseDetailsTable(race);
-
-        // Add page break
-        this.doc.addPage();
-        this.currentY = this.margin;
-
-        // Add race header on second page
-        this.addRaceHeader(race, track, date);
-
-        // Add statistical data table
-        this.addStatisticalDataTable(race);
+    
+        // Only add statistical summary page if requested
+        if (includeStatsPage) {
+            // Add page break
+            this.doc.addPage();
+            this.currentY = this.margin;
+    
+            // Add race header on second page
+            this.addRaceHeader(race, track, date);
+    
+            // Add statistical data table
+            this.addStatisticalDataTable(race);
+        }
+    }
     }
 
     /**
