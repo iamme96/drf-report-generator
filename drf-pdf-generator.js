@@ -228,9 +228,6 @@ class DRFPDFGenerator {
             // Save the PDF
             this.doc.save(filename);
     }
-        this.doc.save(filename);
-    }
-    
     
     /**
      * Generate a single race page
@@ -254,7 +251,6 @@ class DRFPDFGenerator {
             // Add statistical data table
             this.addStatisticalDataTable(race);
         }
-    }
     }
 
     /**
