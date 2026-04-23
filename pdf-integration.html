@@ -250,6 +250,115 @@
         #fileInput {
             display: none;
         }
+
+        /* Analysis Modal Styles */
+        .analysis-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .analysis-modal-content {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 700px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.3s ease;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .analysis-modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .analysis-modal-header h2 {
+            margin: 0;
+            font-size: 1.4em;
+        }
+
+        .analysis-modal-close {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 2em;
+            cursor: pointer;
+            line-height: 1;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .analysis-modal-close:hover {
+            opacity: 1;
+        }
+
+        .analysis-modal-body {
+            padding: 25px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .analysis-section {
+            margin-bottom: 20px;
+        }
+
+        .analysis-section h3 {
+            color: #667eea;
+            margin: 0 0 10px 0;
+            font-size: 1.1em;
+            border-left: 4px solid #667eea;
+            padding-left: 10px;
+        }
+
+        .analysis-item {
+            background: white;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .analysis-item strong {
+            color: #333;
+        }
+
+        .analysis-item .highlight {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideDown {
+            from { 
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to { 
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body>
@@ -334,6 +443,19 @@
     <script src="pdf-report-generator.js"></script>
 
     <!-- Include DRF-specific parser and generator -->
+
+<!-- Analysis Modal -->
+<div id="analysisModal" class="analysis-modal">
+    <div class="analysis-modal-content">
+        <div class="analysis-modal-header">
+            <h2 id="analysisModalTitle">Race Analysis</h2>
+            <button class="analysis-modal-close" onclick="closeAnalysisModal()">&times;</button>
+        </div>
+        <div class="analysis-modal-body" id="analysisModalBody">
+            <p>Loading analysis...</p>
+        </div>
+    </div>
+</div>
     <script src="drf-parser.js"></script>
     <script src="drf-pdf-generator.js?v=1.4.1"></script>
 
@@ -534,6 +656,7 @@
                     </div>
                     <button class="race-item-btn" onclick="event.stopPropagation(); openRaceGraphics(${race.raceNumber});" title="Visualization">📊</button>
                 <button class="race-item-btn" onclick="event.stopPropagation(); openRaceReport(${race.raceNumber});" title="View Report">📄</button>
+                <button class="race-item-btn" onclick="event.stopPropagation(); showRaceAnalysis(${race.raceNumber});" title="Analysis">🔍</button>
                 `;
                 raceItem.addEventListener('click', () => selectRace(race.raceNumber));
                 raceList.appendChild(raceItem);
@@ -825,5 +948,155 @@
             return num.toLocaleString();
         }
     </script>
+
+        function showRaceAnalysis(raceNumber) {
+            if (!drfData) {
+                alert('No race data loaded!');
+                return;
+            }
+            
+            const race = drfData.races.find(r => r.raceNumber == raceNumber);
+            if (!race) {
+                alert('Race not found!');
+                return;
+            }
+            
+            // Generate analysis
+            const analysis = analyzeRace(race);
+            
+            // Update modal content
+            document.getElementById('analysisModalTitle').textContent = `Race ${race.raceNumber} Analysis`;
+            document.getElementById('analysisModalBody').innerHTML = analysis;
+            
+            // Show modal
+            document.getElementById('analysisModal').style.display = 'block';
+        }
+
+        function closeAnalysisModal() {
+            document.getElementById('analysisModal').style.display = 'none';
+        }
+
+        function analyzeRace(race) {
+            let html = '';
+            
+            // Top Contenders
+            const sortedByPR = [...race.horses].sort((a, b) => {
+                const prA = parseFloat(a.powerRating) || 0;
+                const prB = parseFloat(b.powerRating) || 0;
+                return prB - prA;
+            });
+            
+            html += '<div class="analysis-section">';
+            html += '<h3>🏆 Top Contenders (by Power Rating)</h3>';
+            sortedByPR.slice(0, 3).forEach((horse, idx) => {
+                const pr = horse.powerRating || 'N/A';
+                const ml = horse.morningLineOdds || 'N/A';
+                html += `<div class="analysis-item">`;
+                html += `<strong>${idx + 1}. ${horse.horseName}</strong> - `;
+                html += `PR: <span class="highlight">${pr}</span>, `;
+                html += `ML Odds: <span class="highlight">${ml}</span>`;
+                html += `</div>`;
+            });
+            html += '</div>';
+            
+            // Class Analysis
+            html += '<div class="analysis-section">';
+            html += '<h3>📊 Class & Distance Analysis</h3>';
+            html += `<div class="analysis-item">`;
+            html += `<strong>Distance:</strong> ${race.distanceInFurlongs} on ${race.surface}<br>`;
+            html += `<strong>Classification:</strong> ${race.classification}<br>`;
+            html += `<strong>Purse:</strong> $${formatNumber(race.purse)}`;
+            html += `</div>`;
+            html += '</div>';
+            
+            // Jockey/Trainer Analysis
+            const jockeyStats = {};
+            const trainerStats = {};
+            race.horses.forEach(horse => {
+                const jockey = horse.jockeyName || 'Unknown';
+                const trainer = horse.trainerName || 'Unknown';
+                jockeyStats[jockey] = (jockeyStats[jockey] || 0) + 1;
+                trainerStats[trainer] = (trainerStats[trainer] || 0) + 1;
+            });
+            
+            const topJockeys = Object.entries(jockeyStats).sort((a, b) => b[1] - a[1]).slice(0, 3);
+            const topTrainers = Object.entries(trainerStats).sort((a, b) => b[1] - a[1]).slice(0, 3);
+            
+            if (topJockeys.some(([j, c]) => c > 1) || topTrainers.some(([t, c]) => c > 1)) {
+                html += '<div class="analysis-section">';
+                html += '<h3>👥 Key Connections</h3>';
+                
+                if (topJockeys.some(([j, c]) => c > 1)) {
+                    html += `<div class="analysis-item">`;
+                    html += `<strong>Multiple Mounts:</strong> `;
+                    topJockeys.filter(([j, c]) => c > 1).forEach(([jockey, count]) => {
+                        html += `${jockey} (${count} horses) `;
+                    });
+                    html += `</div>`;
+                }
+                
+                html += '</div>';
+            }
+            
+            // Speed Analysis
+            const avgSpeedPar = race.horses.reduce((sum, h) => {
+                const speedPar = parseFloat(h.speedPar) || 0;
+                return sum + speedPar;
+            }, 0) / race.horses.length;
+            
+            html += '<div class="analysis-section">';
+            html += '<h3>⚡ Speed Figures</h3>';
+            html += `<div class="analysis-item">`;
+            html += `<strong>Average Speed Par:</strong> <span class="highlight">${Math.round(avgSpeedPar)}</span><br>`;
+            html += `<strong>Field Size:</strong> ${race.horses.length} horses`;
+            html += `</div>`;
+            html += '</div>';
+            
+            // Key Factors
+            html += '<div class="analysis-section">';
+            html += '<h3>🔑 Key Factors to Consider</h3>';
+            
+            // Check for favorites
+            const favorites = race.horses.filter(h => {
+                const odds = parseFloat(h.morningLineOdds);
+                return !isNaN(odds) && odds < 5;
+            });
+            
+            if (favorites.length > 0) {
+                html += `<div class="analysis-item">`;
+                html += `<strong>${favorites.length} favorite(s)</strong> with morning line odds under 5-1`;
+                html += `</div>`;
+            }
+            
+            // Check for class droppers/risers
+            html += `<div class="analysis-item">`;
+            html += `Review past performance class levels for horses moving up or down in class`;
+            html += `</div>`;
+            
+            // Distance considerations
+            if (parseFloat(race.distanceInFurlongs) >= 8) {
+                html += `<div class="analysis-item">`;
+                html += `<strong>Route race:</strong> Stamina and pace scenario will be crucial`;
+                html += `</div>`;
+            } else if (parseFloat(race.distanceInFurlongs) <= 6) {
+                html += `<div class="analysis-item">`;
+                html += `<strong>Sprint race:</strong> Early speed and gate position important`;
+                html += `</div>`;
+            }
+            
+            html += '</div>';
+            
+            // Close modal on click outside
+            html += `<script>
+                window.onclick = function(event) {
+                    const modal = document.getElementById('analysisModal');
+                    if (event.target == modal) {
+                        closeAnalysisModal();
+                    }
+                }
+            </script>`;
+            
+            return html;
+        }
 </body>
 </html>
