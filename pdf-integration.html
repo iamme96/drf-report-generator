@@ -962,7 +962,6 @@
             
             // Generate analysis
             const analysis = analyzeRace(race);
-    console.log('Analysis generated:', analysis);
             
             // Update modal content
             document.getElementById('analysisModalTitle').textContent = `Race ${race.raceNumber} Analysis`;
@@ -986,116 +985,116 @@
 
         function analyzeRace(race) {
             let html = '';
-    console.log('analyzeRace called for race:', race.raceNumber, 'with', race.horses.length, 'horses');
-    html += '<div style="padding:20px; background:yellow;">TEST: This is a test message. If you see this, the modal is working!</div>';
-            
-            // Top Contenders
-            const sortedByPR = [...race.horses].sort((a, b) => {
-                const prA = parseFloat(a.powerRating) || 0;
-                const prB = parseFloat(b.powerRating) || 0;
-                return prB - prA;
-            });
-            
-            html += '<div class="analysis-section">';
-            html += '<h3>🏆 Top Contenders (by Power Rating)</h3>';
-            sortedByPR.slice(0, 3).forEach((horse, idx) => {
-                const pr = horse.powerRating || 'N/A';
-                const ml = horse.morningLineOdds || 'N/A';
-                html += `<div class="analysis-item">`;
-                html += `<strong>${idx + 1}. ${horse.horseName}</strong> - `;
-                html += `PR: <span class="highlight">${pr}</span>, `;
-                html += `ML Odds: <span class="highlight">${ml}</span>`;
-                html += `</div>`;
+    
+    // Top Contenders
+    const sortedByPR = [...race.horses].sort((a, b) => {
+        const prA = parseFloat(a.powerRating) || 0;
+        const prB = parseFloat(b.powerRating) || 0;
+        return prB - prA;
+    });
+    
+    html += '<div class="analysis-section">';
+    html += '<h3>🏆 Top Contenders (by Power Rating)</h3>';
+    sortedByPR.slice(0, 3).forEach((horse, idx) => {
+        const pr = horse.powerRating || 'N/A';
+        const ml = horse.morningLineOdds || 'N/A';
+        const horseName = horse.horseName || 'Unknown';
+        html += '<div class="analysis-item">';
+        html += '<strong>' + (idx + 1) + '. ' + horseName + '</strong> - ';
+        html += 'PR: <span class="highlight">' + pr + '</span>, ';
+        html += 'ML Odds: <span class="highlight">' + ml + '</span>';
+        html += '</div>';
+    });
+    html += '</div>';
+    
+    // Class Analysis
+    html += '<div class="analysis-section">';
+    html += '<h3>📊 Class & Distance Analysis</h3>';
+    html += '<div class="analysis-item">';
+    html += '<strong>Distance:</strong> ' + race.distanceInFurlongs + ' on ' + race.surface + '<br>';
+    html += '<strong>Classification:</strong> ' + race.classification + '<br>';
+    html += '<strong>Purse:</strong> $' + formatNumber(race.purse);
+    html += '</div>';
+    
+    // Jockey/Trainer Analysis
+    const jockeyStats = {};
+    const trainerStats = {};
+    race.horses.forEach(horse => {
+        const jockey = horse.jockeyName || 'Unknown';
+        const trainer = horse.trainerName || 'Unknown';
+        jockeyStats[jockey] = (jockeyStats[jockey] || 0) + 1;
+        trainerStats[trainer] = (trainerStats[trainer] || 0) + 1;
+    });
+    
+    const topJockeys = Object.entries(jockeyStats).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const topTrainers = Object.entries(trainerStats).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    
+    if (topJockeys.some(([j, c]) => c > 1) || topTrainers.some(([t, c]) => c > 1)) {
+        html += '<div class="analysis-section">';
+        html += '<h3>👥 Key Connections</h3>';
+        
+        if (topJockeys.some(([j, c]) => c > 1)) {
+            html += '<div class="analysis-item">';
+            html += '<strong>Multiple Mounts:</strong> ';
+            topJockeys.filter(([j, c]) => c > 1).forEach(([jockey, count]) => {
+                html += jockey + ' (' + count + ' horses) ';
             });
             html += '</div>';
-            
-            // Class Analysis
-            html += '<div class="analysis-section">';
-            html += '<h3>📊 Class & Distance Analysis</h3>';
-            html += `<div class="analysis-item">`;
-            html += `<strong>Distance:</strong> ${race.distanceInFurlongs} on ${race.surface}<br>`;
-            html += `<strong>Classification:</strong> ${race.classification}<br>`;
-            html += `<strong>Purse:</strong> $${formatNumber(race.purse)}`;
-            html += `</div>`;
-            html += '</div>';
-            
-            // Jockey/Trainer Analysis
-            const jockeyStats = {};
-            const trainerStats = {};
-            race.horses.forEach(horse => {
-                const jockey = horse.jockeyName || 'Unknown';
-                const trainer = horse.trainerName || 'Unknown';
-                jockeyStats[jockey] = (jockeyStats[jockey] || 0) + 1;
-                trainerStats[trainer] = (trainerStats[trainer] || 0) + 1;
-            });
-            
-            const topJockeys = Object.entries(jockeyStats).sort((a, b) => b[1] - a[1]).slice(0, 3);
-            const topTrainers = Object.entries(trainerStats).sort((a, b) => b[1] - a[1]).slice(0, 3);
-            
-            if (topJockeys.some(([j, c]) => c > 1) || topTrainers.some(([t, c]) => c > 1)) {
-                html += '<div class="analysis-section">';
-                html += '<h3>👥 Key Connections</h3>';
-                
-                if (topJockeys.some(([j, c]) => c > 1)) {
-                    html += `<div class="analysis-item">`;
-                    html += `<strong>Multiple Mounts:</strong> `;
-                    topJockeys.filter(([j, c]) => c > 1).forEach(([jockey, count]) => {
-                        html += `${jockey} (${count} horses) `;
-                    });
-                    html += `</div>`;
-                }
-                
-                html += '</div>';
-            }
-            
-            // Speed Analysis
-            const avgSpeedPar = race.horses.reduce((sum, h) => {
-                const speedPar = parseFloat(h.speedPar) || 0;
-                return sum + speedPar;
-            }, 0) / race.horses.length;
-            
-            html += '<div class="analysis-section">';
-            html += '<h3>⚡ Speed Figures</h3>';
-            html += `<div class="analysis-item">`;
-            html += `<strong>Average Speed Par:</strong> <span class="highlight">${Math.round(avgSpeedPar)}</span><br>`;
-            html += `<strong>Field Size:</strong> ${race.horses.length} horses`;
-            html += `</div>`;
-            html += '</div>';
-            
-            // Key Factors
-            html += '<div class="analysis-section">';
-            html += '<h3>🔑 Key Factors to Consider</h3>';
-            
-            // Check for favorites
-            const favorites = race.horses.filter(h => {
-                const odds = parseFloat(h.morningLineOdds);
-                return !isNaN(odds) && odds < 5;
-            });
-            
-            if (favorites.length > 0) {
-                html += `<div class="analysis-item">`;
-                html += `<strong>${favorites.length} favorite(s)</strong> with morning line odds under 5-1`;
-                html += `</div>`;
-            }
-            
-            // Check for class droppers/risers
-            html += `<div class="analysis-item">`;
-            html += `Review past performance class levels for horses moving up or down in class`;
-            html += `</div>`;
-            
-            // Distance considerations
-            if (parseFloat(race.distanceInFurlongs) >= 8) {
-                html += `<div class="analysis-item">`;
-                html += `<strong>Route race:</strong> Stamina and pace scenario will be crucial`;
-                html += `</div>`;
-            } else if (parseFloat(race.distanceInFurlongs) <= 6) {
-                html += `<div class="analysis-item">`;
-                html += `<strong>Sprint race:</strong> Early speed and gate position important`;
-                html += `</div>`;
-            }
-            
-            html += '</div>';
-            
+        }
+        
+        html += '</div>';
+    }
+    
+    // Speed Analysis
+    const avgSpeedPar = race.horses.reduce((sum, h) => {
+        const speedPar = parseFloat(h.speedPar) || 0;
+        return sum + speedPar;
+    }, 0) / race.horses.length;
+    
+    html += '<div class="analysis-section">';
+    html += '<h3>⚡ Speed Figures</h3>';
+    html += '<div class="analysis-item">';
+    html += '<strong>Average Speed Par:</strong> <span class="highlight">' + Math.round(avgSpeedPar) + '</span><br>';
+    html += '<strong>Field Size:</strong> ' + race.horses.length + ' horses';
+    html += '</div>';
+    html += '</div>';
+    
+    // Key Factors
+    html += '<div class="analysis-section">';
+    html += '<h3>🔑 Key Factors to Consider</h3>';
+    
+    // Check for favorites
+    const favorites = race.horses.filter(h => {
+        const odds = parseFloat(h.morningLineOdds);
+        return !isNaN(odds) && odds < 5;
+    });
+    
+    if (favorites.length > 0) {
+        html += '<div class="analysis-item">';
+        html += '<strong>' + favorites.length + ' favorite(s)</strong> with morning line odds under 5-1';
+        html += '</div>';
+    }
+    
+    // Check for class droppers/risers
+    html += '<div class="analysis-item">';
+    html += 'Review past performance class levels for horses moving up or down in class';
+    html += '</div>';
+    
+    // Distance considerations
+    if (parseFloat(race.distanceInFurlongs) >= 8) {
+        html += '<div class="analysis-item">';
+        html += '<strong>Route race:</strong> Stamina and pace scenario will be crucial';
+        html += '</div>';
+    } else if (parseFloat(race.distanceInFurlongs) <= 6) {
+        html += '<div class="analysis-item">';
+        html += '<strong>Sprint race:</strong> Early speed and gate position important';
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    
+    return html;
+}
             return html;
         }
     </script>
