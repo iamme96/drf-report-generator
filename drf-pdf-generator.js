@@ -755,7 +755,7 @@ class DRFPDFGenerator {
             );
         
         // Line 2: Name (left-aligned) and PR(C) score (right-aligned)
-        const name = this.truncate(horse.horseName || '', 16);
+        const name = this.truncate(horse.horseName || '', 12);
         this.doc.text(name, x + 5, y);
         
                 // Display PR(C) score on the right side (without label)
