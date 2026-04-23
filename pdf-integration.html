@@ -986,6 +986,8 @@
 
         function analyzeRace(race) {
             let html = '';
+    console.log('analyzeRace called for race:', race.raceNumber, 'with', race.horses.length, 'horses');
+    html += '<div style="padding:20px; background:yellow;">TEST: This is a test message. If you see this, the modal is working!</div>';
             
             // Top Contenders
             const sortedByPR = [...race.horses].sort((a, b) => {
