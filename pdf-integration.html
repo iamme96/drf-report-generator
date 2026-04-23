@@ -135,9 +135,9 @@
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border: none;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 0.85em;
+    padding: 8px 12px;
+    min-width: 40px;
+    font-size: 1.2em;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -334,7 +334,7 @@
 
     <!-- Include DRF-specific parser and generator -->
     <script src="drf-parser.js"></script>
-    <script src="drf-pdf-generator.js?v=1.4.0"></script>
+    <script src="drf-pdf-generator.js?v=1.4.1"></script>
 
     <script>
         // Check for debug mode via query string
@@ -531,8 +531,8 @@
                     <div class="race-item-info">
                         <strong>Race ${race.raceNumber}</strong> - ${race.distanceInFurlongs} ${race.surface} | ${race.classification} | ${race.horses.length} horses | $${formatNumber(race.purse)}
                     </div>
-                    <button class="race-item-btn" onclick="event.stopPropagation(); openRaceGraphics(${race.raceNumber});">Visualization</button>
-                <button class="race-item-btn" onclick="event.stopPropagation(); openRaceReport(${race.raceNumber});">View Report</button>
+                    <button class="race-item-btn" onclick="event.stopPropagation(); openRaceGraphics(${race.raceNumber});" title="Visualization">📊</button>
+                <button class="race-item-btn" onclick="event.stopPropagation(); openRaceReport(${race.raceNumber});" title="View Report">📄</button>
                 `;
                 raceItem.addEventListener('click', () => selectRace(race.raceNumber));
                 raceList.appendChild(raceItem);
