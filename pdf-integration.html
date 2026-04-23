@@ -1009,7 +1009,7 @@ function analyzeRace(race) {
     });
     html += '</div>';
     
-    // Running Style Analysis
+    // Running Style & Pace Analysis
     const runningStyles = {};
     race.horses.forEach(horse => {
         const style = horse.brisRunStyle || 'Unknown';
@@ -1017,11 +1017,12 @@ function analyzeRace(race) {
     });
     
     html += '<div class="analysis-section">';
-    html += '<h3>🏃 Running Style Analysis</h3>';
+    html += '<h3>🏃 Pace & Running Style Analysis</h3>';
     
     const earlyCount = runningStyles['E'] || 0;
     const closerCount = runningStyles['S'] || 0;
     const pressCount = runningStyles['P'] || 0;
+    const eAndPCount = earlyCount + pressCount;
     
     html += '<div class="analysis-item">';
     html += '<strong>Pace Scenario:</strong> ';
@@ -1030,29 +1031,157 @@ function analyzeRace(race) {
     if (closerCount > 0) html += closerCount + ' Closer (S)';
     html += '</div>';
     
+    // Pace projection insights
     if (earlyCount === 1 && closerCount > 0) {
         html += '<div class="analysis-item">';
-        html += '<strong>⚠️ Key Insight:</strong> Only <span class="highlight">1 Early speed</span> horse - Closers could benefit from slow pace';
+        html += '<strong>⚠️ Pace Projection:</strong> Only <span class="highlight">1 Early speed</span> - Uncontested lead likely. Closers may struggle to make up ground.';
         html += '</div>';
     } else if (earlyCount > 3) {
         html += '<div class="analysis-item">';
-        html += '<strong>⚠️ Key Insight:</strong> <span class="highlight">Multiple speed horses</span> - Pace could be contested, favoring closers';
+        html += '<strong>⚠️ Pace Projection:</strong> <span class="highlight">Hot pace likely</span> - ' + earlyCount + ' speed horses will duel early. Closers and pressers favored.';
         html += '</div>';
     } else if (earlyCount === 0) {
         html += '<div class="analysis-item">';
-        html += '<strong>⚠️ Key Insight:</strong> <span class="highlight">No clear early speed</span> - Race could develop slowly';
+        html += '<strong>⚠️ Pace Projection:</strong> <span class="highlight">No clear early speed</span> - Slow, tactical race likely. Pressers may wire the field.';
+        html += '</div>';
+    } else if (earlyCount >= 2 && earlyCount <= 3) {
+        html += '<div class="analysis-item">';
+        html += '<strong>✓ Pace Projection:</strong> Moderate pace expected - All running styles have a chance.';
         html += '</div>';
     }
     html += '</div>';
     
-    // Jockey/Trainer Analysis - Fix to use actual names
+    // Speed Figure Trends & Class Analysis
+    html += '<div class="analysis-section">';
+    html += '<h3>📈 Form & Class Analysis</h3>';
+    
+    const formAnalysis = [];
+    const classMovers = [];
+    
+    race.horses.forEach(horse => {
+        const horseName = horse.horseName || 'Unknown';
+        
+        // Speed figure trend analysis
+        const speeds = [
+            horse.bestSpeedLife || 0,
+            horse.bestSpeedMostRecentYear || 0,
+            horse.bestSpeed2ndRecentYear || 0
+        ].filter(s => s > 0);
+        
+        if (speeds.length >= 2) {
+            const recent = speeds[0];
+            const older = speeds[speeds.length - 1];
+            if (recent > older + 5) {
+                formAnalysis.push(horseName + ' (improving form)');
+            } else if (recent < older - 5) {
+                formAnalysis.push(horseName + ' (declining form)');
+            }
+        }
+        
+        // Class analysis - compare current purse to historical
+        const todayPurse = parseFloat(race.purse) || 0;
+        // Use earnings or other class indicators as proxy
+        // For now, flag if today's purse is significantly different
+    });
+    
+    if (formAnalysis.length > 0) {
+        html += '<div class="analysis-item">';
+        html += '<strong>Form Trends:</strong> ' + formAnalysis.join(', ');
+        html += '</div>';
+    }
+    html += '</div>';
+    
+    // Distance & Surface Analysis
+    html += '<div class="analysis-section">';
+    html += '<h3>📏 Distance & Surface Factors</h3>';
+    
+    const todayDistance = parseFloat(race.distanceInFurlongs) || 0;
+    const todaySurface = race.surface || '';
+    
+    const distanceChanges = [];
+    const surfaceChanges = [];
+    
+    race.horses.forEach(horse => {
+        const horseName = horse.horseName || 'Unknown';
+        
+        // Check best distance vs today
+        const bestDist = parseFloat(horse.bestSpeedDistance) || 0;
+        if (bestDist > 0) {
+            const distDiff = Math.abs(todayDistance - bestDist);
+            if (distDiff >= 2) {
+                if (todayDistance > bestDist) {
+                    distanceChanges.push(horseName + ' (stretching out +' + distDiff.toFixed(1) + 'F)');
+                } else {
+                    distanceChanges.push(horseName + ' (cutting back -' + distDiff.toFixed(1) + 'F)');
+                }
+            }
+        }
+    });
+    
+    if (distanceChanges.length > 0) {
+        html += '<div class="analysis-item">';
+        html += '<strong>Distance Changes:</strong> ' + distanceChanges.slice(0, 3).join(', ');
+        html += '</div>';
+    }
+    
+    // Distance-specific insights
+    if (todayDistance >= 8.5) {
+        html += '<div class="analysis-item">';
+        html += '<strong>Route Race:</strong> Stamina crucial - favor proven routers and closers';
+        html += '</div>';
+    } else if (todayDistance <= 6) {
+        html += '<div class="analysis-item">';
+        html += '<strong>Sprint Race:</strong> Early speed and gate position key - inside posts advantaged';
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    
+    // Speed Figures
+    let totalBestSpeed = 0;
+    let speedCount = 0;
+    let topSpeedHorse = null;
+    let topSpeed = 0;
+    
+    race.horses.forEach(horse => {
+        const speeds = [
+            horse.bestSpeedLife,
+            horse.bestSpeedMostRecentYear,
+            horse.bestSpeed2ndRecentYear,
+            horse.bestSpeedTrack
+        ].filter(s => s && s > 0);
+        
+        if (speeds.length > 0) {
+            const maxSpeed = Math.max(...speeds);
+            totalBestSpeed += maxSpeed;
+            speedCount++;
+            
+            if (maxSpeed > topSpeed) {
+                topSpeed = maxSpeed;
+                topSpeedHorse = horse.horseName;
+            }
+        }
+    });
+    
+    const avgBestSpeed = speedCount > 0 ? Math.round(totalBestSpeed / speedCount) : 0;
+    
+    if (avgBestSpeed > 0) {
+        html += '<div class="analysis-section">';
+        html += '<h3>⚡ Speed Figures</h3>';
+        html += '<div class="analysis-item">';
+        html += '<strong>Field Avg Top Speed:</strong> <span class="highlight">' + avgBestSpeed + '</span><br>';
+        if (topSpeedHorse) {
+            html += '<strong>Top Fig:</strong> ' + topSpeedHorse + ' (' + topSpeed + ')';
+        }
+        html += '</div>';
+        html += '</div>';
+    }
+    
+    // Jockey/Trainer Analysis
     const jockeyStats = {};
-    const trainerStats = {};
     race.horses.forEach(horse => {
         const jockey = horse.jockey || horse.jockeyName || 'Unknown';
-        const trainer = horse.trainer || horse.trainerName || 'Unknown';
         if (jockey !== 'Unknown') jockeyStats[jockey] = (jockeyStats[jockey] || 0) + 1;
-        if (trainer !== 'Unknown') trainerStats[trainer] = (trainerStats[trainer] || 0) + 1;
     });
     
     const topJockeys = Object.entries(jockeyStats).sort((a, b) => b[1] - a[1]).slice(0, 3);
@@ -1069,43 +1198,10 @@ function analyzeRace(race) {
         html += '</div>';
     }
     
-    // Speed Analysis - Use best speed ratings from horse data
-    let totalBestSpeed = 0;
-    let speedCount = 0;
-    
-    race.horses.forEach(horse => {
-        // Use the best recent speed figures available
-        const speeds = [
-            horse.bestSpeedLife,
-            horse.bestSpeedMostRecentYear,
-            horse.bestSpeed2ndRecentYear,
-            horse.bestSpeedTrack
-        ].filter(s => s && s > 0);
-        
-        if (speeds.length > 0) {
-            // Use the highest speed rating as indicator
-            const topSpeed = Math.max(...speeds);
-            totalBestSpeed += topSpeed;
-            speedCount++;
-        }
-    });
-    
-    const avgBestSpeed = speedCount > 0 ? Math.round(totalBestSpeed / speedCount) : 0;
-    
-    if (avgBestSpeed > 0) {
-        html += '<div class="analysis-section">';
-        html += '<h3>⚡ Speed Figures</h3>';
-        html += '<div class="analysis-item">';
-        html += '<strong>Avg Top Speed:</strong> <span class="highlight">' + avgBestSpeed + '</span><br>';
-        html += '<strong>Field Size:</strong> ' + race.horses.length + ' horses';
-        html += '</div>';
-        html += '</div>';
-    }
-    // Key Factors
+    // Key Factors Summary
     html += '<div class="analysis-section">';
     html += '<h3>🔑 Key Factors to Consider</h3>';
     
-    // Check for favorites
     const favorites = race.horses.filter(h => {
         const odds = parseFloat(h.morningLineOdds);
         return !isNaN(odds) && odds < 5;
@@ -1113,18 +1209,18 @@ function analyzeRace(race) {
     
     if (favorites.length > 0) {
         html += '<div class="analysis-item">';
-        html += '<strong>' + favorites.length + ' favorite(s)</strong> with morning line odds under 5-1';
+        html += '<strong>Favorites:</strong> ' + favorites.length + ' horse(s) under 5-1';
         html += '</div>';
     }
     
-    // Distance considerations
-    if (parseFloat(race.distanceInFurlongs) >= 8) {
+    // Field size consideration
+    if (race.horses.length <= 6) {
         html += '<div class="analysis-item">';
-        html += '<strong>Route race:</strong> Stamina and pace scenario will be crucial';
+        html += '<strong>Small Field:</strong> Fewer horses means pace may be slower and positional advantage reduced';
         html += '</div>';
-    } else if (parseFloat(race.distanceInFurlongs) <= 6) {
+    } else if (race.horses.length >= 12) {
         html += '<div class="analysis-item">';
-        html += '<strong>Sprint race:</strong> Early speed and gate position important';
+        html += '<strong>Large Field:</strong> Traffic and trip luck will be major factors - inside speed advantaged';
         html += '</div>';
     }
     
