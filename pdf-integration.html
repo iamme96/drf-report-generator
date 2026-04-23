@@ -1069,35 +1069,38 @@ function analyzeRace(race) {
         html += '</div>';
     }
     
-    // Speed Analysis - Fix to use actual speed par from past performances
-    let totalSpeedFigs = 0;
+    // Speed Analysis - Use best speed ratings from horse data
+    let totalBestSpeed = 0;
     let speedCount = 0;
+    
     race.horses.forEach(horse => {
-        if (horse.pastPerformances && horse.pastPerformances.length > 0) {
-            horse.pastPerformances.slice(0, 3).forEach(pp => {
-                const speedFig = parseFloat(pp.speedFigure) || parseFloat(pp.speedRating) || 0;
-                if (speedFig > 0) {
-                    totalSpeedFigs += speedFig;
-                    speedCount++;
-                }
-            });
+        // Use the best recent speed figures available
+        const speeds = [
+            horse.bestSpeedLife,
+            horse.bestSpeedMostRecentYear,
+            horse.bestSpeed2ndRecentYear,
+            horse.bestSpeedTrack
+        ].filter(s => s && s > 0);
+        
+        if (speeds.length > 0) {
+            // Use the highest speed rating as indicator
+            const topSpeed = Math.max(...speeds);
+            totalBestSpeed += topSpeed;
+            speedCount++;
         }
     });
     
-    const avgSpeedFig = speedCount > 0 ? Math.round(totalSpeedFigs / speedCount) : 0;
+    const avgBestSpeed = speedCount > 0 ? Math.round(totalBestSpeed / speedCount) : 0;
     
-    if (avgSpeedFig > 0 || race.horses.length > 0) {
+    if (avgBestSpeed > 0) {
         html += '<div class="analysis-section">';
         html += '<h3>⚡ Speed Figures</h3>';
         html += '<div class="analysis-item">';
-        if (avgSpeedFig > 0) {
-            html += '<strong>Avg Recent Speed:</strong> <span class="highlight">' + avgSpeedFig + '</span><br>';
-        }
+        html += '<strong>Avg Top Speed:</strong> <span class="highlight">' + avgBestSpeed + '</span><br>';
         html += '<strong>Field Size:</strong> ' + race.horses.length + ' horses';
         html += '</div>';
         html += '</div>';
     }
-    
     // Key Factors
     html += '<div class="analysis-section">';
     html += '<h3>🔑 Key Factors to Consider</h3>';
