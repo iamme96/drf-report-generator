@@ -950,7 +950,9 @@
 
         function showRaceAnalysis(raceNumber) {
             if (!drfData) {
-        alert('Analysis button clicked for race ' + raceNumber);
+        console.log('showRaceAnalysis called with race:', raceNumber);
+        console.log('drfData:', drfData);
+        console.log('race found:', drfData.races.find(r => r.raceNumber == raceNumber));
                 alert('No race data loaded!');
                 return;
             }
@@ -965,6 +967,8 @@
             const analysis = analyzeRace(race);
             
             // Update modal content
+    console.log('Analysis HTML received, length:', analysis.length);
+    console.log('Analysis HTML:', analysis);
             document.getElementById('analysisModalTitle').textContent = `Race ${race.raceNumber} Analysis`;
             document.getElementById('analysisModalBody').innerHTML = analysis;
             
@@ -986,6 +990,8 @@
 
         function analyzeRace(race) {
             let html = '';
+    console.log('analyzeRace starting, race:', race);
+    console.log('race.horses:', race.horses);
     
     // Top Contenders
     const sortedByPR = [...race.horses].sort((a, b) => {
@@ -1095,6 +1101,8 @@
     html += '</div>';
     
     // Return the generated HTML
+    console.log('Returning html, length:', html.length);
+    console.log('HTML content:', html.substring(0, 200));
     return html;
 }
     </script>
