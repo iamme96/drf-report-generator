@@ -976,6 +976,14 @@
             document.getElementById('analysisModal').style.display = 'none';
         }
 
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('analysisModal');
+            if (event.target == modal) {
+                closeAnalysisModal();
+            }
+        });
+
         function analyzeRace(race) {
             let html = '';
             
@@ -1085,16 +1093,6 @@
             }
             
             html += '</div>';
-            
-            // Close modal on click outside
-            html += `<script>
-                window.onclick = function(event) {
-                    const modal = document.getElementById('analysisModal');
-                    if (event.target == modal) {
-                        closeAnalysisModal();
-                    }
-                }
-            </script>`;
             
             return html;
         }
