@@ -1749,7 +1749,9 @@ async function callGeminiAPI(prompt, isFollowUp = false) {
         };
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // Try different model endpoints - Gemini Flash is the free tier model
+    // First try gemini-1.5-flash-latest, fallback to gemini-pro
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
 
     try {
         const response = await fetch(url, {
