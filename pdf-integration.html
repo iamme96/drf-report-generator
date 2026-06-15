@@ -46,9 +46,8 @@
 
         .config-icon {
             position: absolute;
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
+            right: 10px;
+            top: 10px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
@@ -62,10 +61,11 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+            z-index: 10;
         }
 
         .config-icon:hover {
-            transform: translateY(-50%) rotate(90deg);
+            transform: rotate(90deg);
             box-shadow: 0 5px 20px rgba(102, 126, 234, 0.5);
         }
 
