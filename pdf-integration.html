@@ -1738,7 +1738,7 @@ function formatRaceDataForAI(race) {
     return { race: raceInfo, horses: horsesData };
 }
 
-// Call Gemini API
+// Call Gemini API with fallback models
 async function callGeminiAPI(prompt, isFollowUp = false) {
     const apiKey = localStorage.getItem('gemini_api_key');
 
@@ -1749,52 +1749,75 @@ async function callGeminiAPI(prompt, isFollowUp = false) {
         };
     }
 
-    // Use v1 API with gemini-1.5-flash (free tier, fast model)
-    // Newer API keys (starting with AQ) work with v1 endpoint
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // Try multiple model endpoints in order of preference
+    const modelsToTry = [
+        { name: 'gemini-1.5-flash', api: 'v1' },
+        { name: 'gemini-1.5-pro', api: 'v1' },
+        { name: 'gemini-pro', api: 'v1beta' },
+        { name: 'gemini-1.5-flash-latest', api: 'v1beta' },
+        { name: 'gemini-1.5-pro-latest', api: 'v1beta' }
+    ];
 
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: prompt
-                    }]
-                }],
-                generationConfig: {
-                    temperature: 0.7,
-                    maxOutputTokens: 2048
-                }
-            })
-        });
+    let lastError = null;
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Full API error:', errorData);
-            throw new Error(errorData.error?.message || `API request failed: ${response.status}`);
+    for (const model of modelsToTry) {
+        const url = `https://generativelanguage.googleapis.com/${model.api}/models/${model.name}:generateContent?key=${apiKey}`;
+
+        try {
+            console.log(`Trying model: ${model.name} (${model.api})`);
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 2048
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.warn(`Model ${model.name} failed:`, errorData.error?.message);
+                lastError = errorData.error?.message;
+                continue; // Try next model
+            }
+
+            const data = await response.json();
+            console.log(`✅ Success with model: ${model.name}`);
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (!text) {
+                console.warn(`Model ${model.name} returned no text`);
+                continue;
+            }
+
+            // Store successful model for future use
+            localStorage.setItem('gemini_working_model', JSON.stringify(model));
+
+            return { error: false, text };
+
+        } catch (error) {
+            console.warn(`Model ${model.name} error:`, error.message);
+            lastError = error.message;
+            continue;
         }
-
-        const data = await response.json();
-        console.log('API response:', data);
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (!text) {
-            throw new Error('No response generated');
-        }
-
-        return { error: false, text };
-
-    } catch (error) {
-        console.error('Gemini API error:', error);
-        return {
-            error: true,
-            message: `API Error: ${error.message}\n\nPlease check:\n1. Your API key is valid\n2. You have internet connection\n3. API quota hasn't been exceeded`
-        };
     }
+
+    // All models failed
+    console.error('All models failed. Last error:', lastError);
+    return {
+        error: true,
+        message: `Could not connect to any Gemini model.\n\nLast error: ${lastError}\n\nPlease verify:\n1. Your API key is valid (from https://aistudio.google.com/app/apikey)\n2. You have internet connection\n3. API is not blocked by firewall/proxy`
+    };
 }
 
 // Generate AI prompt for initial race analysis
