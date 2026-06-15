@@ -17,10 +17,11 @@ const PURSE_WEIGHTS = {
 };
 
 /**
- * Configuration: Correlation coefficients for performance rating calculations
+ * Configuration: Default Correlation coefficients for performance rating calculations
  * These coefficients are used to calculate the PR score in Table 2, Column 7
+ * Can be customized via the Configuration modal (saved in cookies)
  */
-const CORRELATION_COEFFICIENTS = {
+const DEFAULT_CORRELATION_COEFFICIENTS = {
     PR: 0.295,        // Power Rating correlation
     MONEY_MR: 0.130,  // Money Rating correlation
     JOCKEY_MR: 0.128, // Jockey Money Rating correlation
@@ -28,6 +29,25 @@ const CORRELATION_COEFFICIENTS = {
     SPEED_MR: 0.183,  // Speed Money Rating correlation
     AVG_PAR: 0.110    // Average Par correlation
 };
+
+/**
+ * Get correlation coefficients from cookie or use defaults
+ */
+function getCorrelationCoefficients() {
+    try {
+        const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('drf_coefficients='));
+
+        if (cookieValue) {
+            const coefficients = JSON.parse(decodeURIComponent(cookieValue.split('=')[1]));
+            return coefficients;
+        }
+    } catch (e) {
+        console.warn('Error loading coefficients from cookie, using defaults:', e);
+    }
+    return DEFAULT_CORRELATION_COEFFICIENTS;
+}
 
 class DRFPDFGenerator {
     constructor() {
@@ -2264,6 +2284,9 @@ class DRFPDFGenerator {
         const trainerMR = parseFloat(normalizedTrainerMR) || 0;
         const speedMR = parseFloat(normalizedSpeedMR) || 0;
         const avgPar = parseFloat(normalizedAvgPar) || 0;
+
+        // Get current correlation coefficients (from cookie or defaults)
+        const CORRELATION_COEFFICIENTS = getCorrelationCoefficients();
 
         // Calculate weighted sum using correlation coefficients (columns 2-6 and 8)
         const weightedSum =

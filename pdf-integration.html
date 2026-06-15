@@ -34,6 +34,7 @@
         .header {
             text-align: center;
             margin-bottom: 15px;
+            position: relative;
         }
 
         .header h1 {
@@ -41,6 +42,31 @@
             font-size: 1.8em;
             margin-bottom: 5px;
             font-weight: 300;
+        }
+
+        .config-icon {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .config-icon:hover {
+            transform: translateY(-50%) rotate(90deg);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.5);
         }
 
         .page-analysis-section {
@@ -352,14 +378,88 @@
         }
 
         @keyframes slideDown {
-            from { 
+            from {
                 transform: translateY(-50px);
                 opacity: 0;
             }
-            to { 
+            to {
                 transform: translateY(0);
                 opacity: 1;
             }
+        }
+
+        /* Configuration Modal Styles */
+        .config-section {
+            margin-bottom: 25px;
+        }
+
+        .config-section h3 {
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .config-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .config-item label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .config-item input[type="number"] {
+            flex: 1;
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .config-item input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .percentage {
+            font-weight: 600;
+            color: #667eea;
+            min-width: 50px;
+        }
+
+        .config-total {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.1em;
+            border: 2px solid #667eea;
+        }
+
+        .config-total span {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.2em;
         }
     </style>
 </head>
@@ -367,6 +467,7 @@
     <div class="container">
         <div class="header">
             <h1>🐎 Horse Racing Analysis</h1>
+            <button class="config-icon" onclick="openConfigModal()" title="Configuration">⚙️</button>
         </div>
 
         <!-- File Upload Section -->
@@ -458,8 +559,89 @@
         </div>
     </div>
 </div>
+
+<!-- Configuration Modal -->
+<div id="configModal" class="analysis-modal">
+    <div class="analysis-modal-content" style="max-width: 700px;">
+        <div class="analysis-modal-header">
+            <h2>⚙️ Configuration Settings</h2>
+            <button class="analysis-modal-close" onclick="closeConfigModal()">&times;</button>
+        </div>
+        <div class="analysis-modal-body">
+            <!-- Correlation Coefficients Section -->
+            <div class="config-section">
+                <h3 style="color: #667eea; margin-top: 0;">📊 Correlation Coefficients</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">
+                    These weights determine how each factor contributes to the PR(C) score. Total should equal 1.00 (100%).
+                </p>
+
+                <div class="config-grid">
+                    <div class="config-item">
+                        <label for="coef_PR">Power Rating (PR)</label>
+                        <div class="input-group">
+                            <input type="number" id="coef_PR" step="0.001" min="0" max="1" value="0.295">
+                            <span class="percentage"></span>
+                        </div>
+                    </div>
+
+                    <div class="config-item">
+                        <label for="coef_SPEED_MR">Speed Money Rating</label>
+                        <div class="input-group">
+                            <input type="number" id="coef_SPEED_MR" step="0.001" min="0" max="1" value="0.183">
+                            <span class="percentage"></span>
+                        </div>
+                    </div>
+
+                    <div class="config-item">
+                        <label for="coef_TRAINER_MR">Trainer Money Rating</label>
+                        <div class="input-group">
+                            <input type="number" id="coef_TRAINER_MR" step="0.001" min="0" max="1" value="0.154">
+                            <span class="percentage"></span>
+                        </div>
+                    </div>
+
+                    <div class="config-item">
+                        <label for="coef_MONEY_MR">Money Rating</label>
+                        <div class="input-group">
+                            <input type="number" id="coef_MONEY_MR" step="0.001" min="0" max="1" value="0.130">
+                            <span class="percentage"></span>
+                        </div>
+                    </div>
+
+                    <div class="config-item">
+                        <label for="coef_JOCKEY_MR">Jockey Money Rating</label>
+                        <div class="input-group">
+                            <input type="number" id="coef_JOCKEY_MR" step="0.001" min="0" max="1" value="0.128">
+                            <span class="percentage"></span>
+                        </div>
+                    </div>
+
+                    <div class="config-item">
+                        <label for="coef_AVG_PAR">Average Par</label>
+                        <div class="input-group">
+                            <input type="number" id="coef_AVG_PAR" step="0.001" min="0" max="1" value="0.110">
+                            <span class="percentage"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="config-total">
+                    <strong>Total:</strong> <span id="totalCoefficients">1.000</span>
+                    <span id="totalWarning" style="color: #f44336; margin-left: 10px; display: none;">⚠️ Should equal 1.000</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                <button class="btn" onclick="resetToDefaults()" style="background: #999;">🔄 Reset to Defaults</button>
+                <button class="btn" onclick="saveConfiguration()">💾 Save Configuration</button>
+            </div>
+        </div>
+    </div>
+</div>
+
     <script src="drf-parser.js"></script>
-    <script src="drf-pdf-generator.js?v=1.4.1"></script>
+    <script src="drf-pdf-generator.js?v=1.5.0"></script>
 
     <script>
         // Check for debug mode via query string
@@ -1225,9 +1407,178 @@ function analyzeRace(race) {
     }
     
     html += '</div>';
-    
+
     return html;
 }
+
+// ============================================
+// CONFIGURATION MANAGEMENT
+// ============================================
+
+// Default correlation coefficients
+const DEFAULT_COEFFICIENTS = {
+    PR: 0.295,
+    MONEY_MR: 0.130,
+    JOCKEY_MR: 0.128,
+    TRAINER_MR: 0.154,
+    SPEED_MR: 0.183,
+    AVG_PAR: 0.110
+};
+
+// Cookie management functions
+function setCookie(name, value, days = 365) {
+    const date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    const expires = "expires=" + date.toUTCString();
+    document.cookie = name + "=" + JSON.stringify(value) + ";" + expires + ";path=/";
+}
+
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) {
+            try {
+                return JSON.parse(c.substring(nameEQ.length, c.length));
+            } catch (e) {
+                return null;
+            }
+        }
+    }
+    return null;
+}
+
+// Load configuration from cookie or use defaults
+function loadConfiguration() {
+    const savedConfig = getCookie('drf_coefficients');
+    const coefficients = savedConfig || DEFAULT_COEFFICIENTS;
+
+    // Update input fields
+    Object.keys(coefficients).forEach(key => {
+        const input = document.getElementById('coef_' + key);
+        if (input) {
+            input.value = coefficients[key];
+        }
+    });
+
+    updateCoefficientDisplay();
+    return coefficients;
+}
+
+// Open configuration modal
+function openConfigModal() {
+    loadConfiguration();
+    document.getElementById('configModal').style.display = 'flex';
+}
+
+// Close configuration modal
+function closeConfigModal() {
+    document.getElementById('configModal').style.display = 'none';
+}
+
+// Update coefficient display and totals
+function updateCoefficientDisplay() {
+    let total = 0;
+    const coefficientKeys = ['PR', 'MONEY_MR', 'JOCKEY_MR', 'TRAINER_MR', 'SPEED_MR', 'AVG_PAR'];
+
+    coefficientKeys.forEach(key => {
+        const input = document.getElementById('coef_' + key);
+        if (input) {
+            const value = parseFloat(input.value) || 0;
+            total += value;
+
+            // Update percentage display
+            const percentageSpan = input.parentElement.querySelector('.percentage');
+            if (percentageSpan) {
+                percentageSpan.textContent = (value * 100).toFixed(1) + '%';
+            }
+        }
+    });
+
+    // Update total display
+    const totalSpan = document.getElementById('totalCoefficients');
+    if (totalSpan) {
+        totalSpan.textContent = total.toFixed(3);
+        totalSpan.style.color = Math.abs(total - 1.0) < 0.001 ? '#667eea' : '#f44336';
+    }
+
+    // Show/hide warning
+    const warning = document.getElementById('totalWarning');
+    if (warning) {
+        warning.style.display = Math.abs(total - 1.0) < 0.001 ? 'none' : 'inline';
+    }
+}
+
+// Save configuration to cookie
+function saveConfiguration() {
+    const coefficients = {};
+    const coefficientKeys = ['PR', 'MONEY_MR', 'JOCKEY_MR', 'TRAINER_MR', 'SPEED_MR', 'AVG_PAR'];
+
+    let total = 0;
+    coefficientKeys.forEach(key => {
+        const input = document.getElementById('coef_' + key);
+        if (input) {
+            const value = parseFloat(input.value) || 0;
+            coefficients[key] = value;
+            total += value;
+        }
+    });
+
+    // Validate total equals 1.0
+    if (Math.abs(total - 1.0) > 0.001) {
+        alert('Error: Coefficients must sum to 1.000 (currently ' + total.toFixed(3) + ')');
+        return;
+    }
+
+    // Save to cookie
+    setCookie('drf_coefficients', coefficients);
+
+    // Update the global CORRELATION_COEFFICIENTS in drf-pdf-generator.js
+    if (window.DRFPDFGenerator) {
+        window.DRFPDFGenerator.CORRELATION_COEFFICIENTS = coefficients;
+    }
+
+    alert('✅ Configuration saved successfully!\n\nNew coefficients will be used for all PR(C) calculations.');
+    closeConfigModal();
+}
+
+// Reset to default coefficients
+function resetToDefaults() {
+    if (confirm('Reset all coefficients to default values?')) {
+        Object.keys(DEFAULT_COEFFICIENTS).forEach(key => {
+            const input = document.getElementById('coef_' + key);
+            if (input) {
+                input.value = DEFAULT_COEFFICIENTS[key];
+            }
+        });
+        updateCoefficientDisplay();
+    }
+}
+
+// Add event listeners to coefficient inputs
+document.addEventListener('DOMContentLoaded', function() {
+    const coefficientKeys = ['PR', 'MONEY_MR', 'JOCKEY_MR', 'TRAINER_MR', 'SPEED_MR', 'AVG_PAR'];
+    coefficientKeys.forEach(key => {
+        const input = document.getElementById('coef_' + key);
+        if (input) {
+            input.addEventListener('input', updateCoefficientDisplay);
+        }
+    });
+
+    // Load saved configuration on page load
+    loadConfiguration();
+});
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const configModal = document.getElementById('configModal');
+    if (event.target === configModal) {
+        closeConfigModal();
+    }
+});
+
     </script>
 </body>
 </html>
