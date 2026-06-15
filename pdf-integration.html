@@ -631,10 +631,81 @@
                 </div>
             </div>
 
+            <!-- AI Integration Section -->
+            <div class="config-section">
+                <h3 style="color: #667eea;">🤖 AI Analysis Integration</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">
+                    Enable AI-powered race analysis with Google Gemini (free).
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #667eea;">Get your free API key here</a>
+                </p>
+
+                <div class="config-item" style="max-width: 100%;">
+                    <label for="gemini_api_key">Google Gemini API Key</label>
+                    <input type="password" id="gemini_api_key"
+                           placeholder="Enter your Gemini API key (starts with 'AIza...')"
+                           style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.95em; font-family: monospace;">
+                    <small style="color: #999; display: block; margin-top: 8px;">
+                        Your API key is stored locally and never sent to our servers.
+                        <button type="button" onclick="toggleApiKeyVisibility()" style="background: none; border: none; color: #667eea; cursor: pointer; text-decoration: underline; padding: 0;">
+                            Show/Hide
+                        </button>
+                    </small>
+                </div>
+            </div>
+
             <!-- Action Buttons -->
             <div style="text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
                 <button class="btn" onclick="resetToDefaults()" style="background: #999;">🔄 Reset to Defaults</button>
                 <button class="btn" onclick="saveConfiguration()">💾 Save Configuration</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Analysis Modal -->
+<div id="aiModal" class="analysis-modal">
+    <div class="analysis-modal-content" style="max-width: 900px; max-height: 90vh;">
+        <div class="analysis-modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h2 id="aiModalTitle">🤖 AI Race Analysis</h2>
+            <button class="analysis-modal-close" onclick="closeAIModal()">&times;</button>
+        </div>
+        <div class="analysis-modal-body" style="display: flex; flex-direction: column; height: calc(90vh - 120px);">
+            <!-- Analysis Display -->
+            <div id="aiAnalysisContent" style="flex: 1; overflow-y: auto; padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 15px;">
+                <div style="text-align: center; padding: 40px; color: #999;">
+                    <div style="font-size: 3em; margin-bottom: 10px;">🤖</div>
+                    <p>AI analysis will appear here...</p>
+                </div>
+            </div>
+
+            <!-- Chat Interface -->
+            <div style="border-top: 2px solid #667eea; padding-top: 15px;">
+                <div style="margin-bottom: 10px;">
+                    <strong style="color: #667eea;">💬 Ask a Follow-up Question:</strong>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="aiChatInput"
+                           placeholder="e.g., 'Which horse is the best value?' or 'Compare horses 3 and 7'"
+                           style="flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em;"
+                           onkeypress="if(event.key==='Enter') sendAIChat()">
+                    <button class="btn" onclick="sendAIChat()" style="margin: 0; white-space: nowrap;">
+                        📤 Send
+                    </button>
+                </div>
+                <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button onclick="quickQuestion('Which horse is the best value?')"
+                            style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 15px; cursor: pointer; font-size: 0.85em;">
+                        Best value?
+                    </button>
+                    <button onclick="quickQuestion('What are the top 3 exacta combinations?')"
+                            style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 15px; cursor: pointer; font-size: 0.85em;">
+                        Exacta picks?
+                    </button>
+                    <button onclick="quickQuestion('Which horses should I eliminate?')"
+                            style="background: #f0f0f0; border: 1px solid #ddd; padding: 6px 12px; border-radius: 15px; cursor: pointer; font-size: 0.85em;">
+                        Who to eliminate?
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -841,6 +912,7 @@
                     <button class="race-item-btn" onclick="event.stopPropagation(); openRaceGraphics(${race.raceNumber});" title="Visualization">📊</button>
                 <button class="race-item-btn" onclick="event.stopPropagation(); openRaceReport(${race.raceNumber});" title="View Report">📄</button>
                 <button class="race-item-btn" onclick="event.stopPropagation(); showRaceAnalysis(${race.raceNumber});" title="Analysis">🔍</button>
+                <button class="race-item-btn" onclick="event.stopPropagation(); showAIAnalysis(${race.raceNumber});" title="AI Analysis">🤖</button>
                 `;
                 raceItem.addEventListener('click', () => selectRace(race.raceNumber));
                 raceList.appendChild(raceItem);
@@ -1475,7 +1547,7 @@ function loadConfiguration() {
 
     console.log('Loading configuration:', coefficients);
 
-    // Update input fields
+    // Update coefficient input fields
     Object.keys(coefficients).forEach(key => {
         const input = document.getElementById('coef_' + key);
         if (input) {
@@ -1483,8 +1555,23 @@ function loadConfiguration() {
         }
     });
 
+    // Load API key
+    const apiKey = localStorage.getItem('gemini_api_key') || '';
+    const apiKeyInput = document.getElementById('gemini_api_key');
+    if (apiKeyInput) {
+        apiKeyInput.value = apiKey;
+    }
+
     updateCoefficientDisplay();
     return coefficients;
+}
+
+// Toggle API key visibility
+function toggleApiKeyVisibility() {
+    const input = document.getElementById('gemini_api_key');
+    if (input) {
+        input.type = input.type === 'password' ? 'text' : 'password';
+    }
 }
 
 // Open configuration modal
@@ -1552,8 +1639,15 @@ function saveConfiguration() {
         return;
     }
 
-    // Save to storage
+    // Save coefficients to storage
     const saved = saveToStorage('drf_coefficients', coefficients);
+
+    // Save API key to localStorage
+    const apiKeyInput = document.getElementById('gemini_api_key');
+    if (apiKeyInput && apiKeyInput.value.trim()) {
+        localStorage.setItem('gemini_api_key', apiKeyInput.value.trim());
+        console.log('Gemini API key saved');
+    }
 
     if (!saved) {
         alert('⚠️ Warning: Could not save configuration. Settings will only apply to this session.');
@@ -1561,7 +1655,7 @@ function saveConfiguration() {
 
     console.log('Saved configuration:', coefficients);
 
-    alert('✅ Configuration saved successfully!\n\nNew coefficients will be used for all PR(C) calculations.');
+    alert('✅ Configuration saved successfully!\n\nNew coefficients and AI settings will be used.');
     closeConfigModal();
 }
 
@@ -1598,7 +1692,306 @@ document.addEventListener('click', function(event) {
     if (event.target === configModal) {
         closeConfigModal();
     }
+
+    const aiModal = document.getElementById('aiModal');
+    if (event.target === aiModal) {
+        closeAIModal();
+    }
 });
+
+// ============================================
+// AI ANALYSIS FUNCTIONS
+// ============================================
+
+let currentAIRaceNumber = null;
+let aiConversationHistory = [];
+
+// Format race data for AI analysis
+function formatRaceDataForAI(race) {
+    const raceInfo = {
+        raceNumber: race.raceNumber,
+        distance: race.distanceInFurlongs + 'F',
+        surface: race.surface,
+        classification: race.classification,
+        purse: '$' + formatNumber(race.purse),
+        fieldSize: race.horses.length
+    };
+
+    const horsesData = race.horses.map((horse, index) => {
+        return {
+            position: index + 1,
+            name: horse.horseName || 'Unknown',
+            programNumber: horse.programNumber || (index + 1),
+            morningLine: horse.morningLineOdds || 'N/A',
+            powerRating: horse.powerRating || 'N/A',
+            prScore: horse.prScore || 'N/A',
+            jockey: horse.jockeyName || 'Unknown',
+            trainer: horse.trainerName || 'Unknown',
+            bestSpeed: horse.bestSpeedLife || 'N/A',
+            recentSpeed: horse.bestSpeedMostRecentYear || 'N/A',
+            runStyle: horse.brisRunStyle || 'Unknown',
+            daysOff: horse.daysSinceLastRace || 'N/A',
+            lastRaceDate: horse.lastRaceDate || 'N/A'
+        };
+    });
+
+    return { race: raceInfo, horses: horsesData };
+}
+
+// Call Gemini API
+async function callGeminiAPI(prompt, isFollowUp = false) {
+    const apiKey = localStorage.getItem('gemini_api_key');
+
+    if (!apiKey || !apiKey.trim()) {
+        return {
+            error: true,
+            message: 'Please configure your Google Gemini API key in Settings (⚙️) first.\n\nGet a free API key at: https://aistudio.google.com/app/apikey'
+        };
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{
+                        text: prompt
+                    }]
+                }],
+                generationConfig: {
+                    temperature: 0.7,
+                    maxOutputTokens: 2048
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || 'API request failed');
+        }
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!text) {
+            throw new Error('No response generated');
+        }
+
+        return { error: false, text };
+
+    } catch (error) {
+        console.error('Gemini API error:', error);
+        return {
+            error: true,
+            message: `API Error: ${error.message}\n\nPlease check:\n1. Your API key is valid\n2. You have internet connection\n3. API quota hasn't been exceeded`
+        };
+    }
+}
+
+// Generate AI prompt for initial race analysis
+function generateRaceAnalysisPrompt(raceData) {
+    const { race, horses } = raceData;
+
+    let prompt = `You are an expert horse racing handicapper. Analyze this race and provide detailed insights.
+
+RACE INFORMATION:
+- Race ${race.raceNumber}: ${race.distance} ${race.surface}
+- Class: ${race.classification}
+- Purse: ${race.purse}
+- Field Size: ${race.fieldSize} horses
+
+HORSES IN RACE:
+`;
+
+    horses.forEach(h => {
+        prompt += `\n${h.position}. ${h.name} (#${h.programNumber})
+   - ML Odds: ${h.morningLine}
+   - Power Rating: ${h.powerRating} | PR(C) Score: ${h.prScore}
+   - Jockey: ${h.jockey} | Trainer: ${h.trainer}
+   - Speed: Best=${h.bestSpeed}, Recent=${h.recentSpeed}
+   - Run Style: ${h.runStyle}
+   - Days Off: ${h.daysOff}
+`;
+    });
+
+    prompt += `\n\nPLEASE PROVIDE:
+1. **Top Contenders** (3-5 horses with best win chances and why)
+2. **Value Plays** (horses whose odds don't match their chances)
+3. **Pace Analysis** (expected pace scenario and which running styles benefit)
+4. **Key Factors** (critical race dynamics - distance, class, form, etc.)
+5. **Betting Strategy** (suggested win/place/show and exotic plays)
+6. **Horses to Eliminate** (and why they're unlikely to hit the board)
+
+Be specific, data-driven, and concise. Focus on actionable handicapping insights.`;
+
+    return prompt;
+}
+
+// Show AI Analysis Modal
+async function showAIAnalysis(raceNumber) {
+    if (!drfData) {
+        alert('No race data loaded!');
+        return;
+    }
+
+    const race = drfData.races.find(r => r.raceNumber === raceNumber);
+    if (!race) {
+        alert('Race not found!');
+        return;
+    }
+
+    // Store current race and reset conversation
+    currentAIRaceNumber = raceNumber;
+    aiConversationHistory = [];
+
+    // Show modal
+    document.getElementById('aiModal').style.display = 'flex';
+    document.getElementById('aiModalTitle').textContent = `🤖 AI Analysis - Race ${raceNumber}`;
+
+    // Show loading state
+    const contentDiv = document.getElementById('aiAnalysisContent');
+    contentDiv.innerHTML = `
+        <div style="text-align: center; padding: 40px;">
+            <div style="font-size: 3em; margin-bottom: 20px;">🤖</div>
+            <div style="font-size: 1.2em; color: #667eea; margin-bottom: 10px;">Analyzing race data...</div>
+            <div style="color: #999;">This may take a few seconds...</div>
+        </div>
+    `;
+
+    // Format race data and generate prompt
+    const raceData = formatRaceDataForAI(race);
+    const prompt = generateRaceAnalysisPrompt(raceData);
+
+    // Store initial prompt in history
+    aiConversationHistory.push({ role: 'user', content: prompt });
+
+    // Call AI
+    const result = await callGeminiAPI(prompt);
+
+    if (result.error) {
+        contentDiv.innerHTML = `
+            <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3 style="color: #856404; margin-top: 0;">⚠️ Configuration Required</h3>
+                <p style="color: #856404; white-space: pre-wrap;">${result.message}</p>
+                <button class="btn" onclick="closeAIModal(); openConfigModal();" style="margin-top: 15px;">
+                    ⚙️ Open Settings
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    // Store AI response in history
+    aiConversationHistory.push({ role: 'assistant', content: result.text });
+
+    // Display analysis
+    displayAIAnalysis(result.text);
+}
+
+// Display AI analysis in modal
+function displayAIAnalysis(text, isFollowUp = false) {
+    const contentDiv = document.getElementById('aiAnalysisContent');
+
+    // Format the text with markdown-style formatting
+    let formatted = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/#{1,3}\s+(.*?)(\n|$)/g, '<h3 style="color: #667eea; margin-top: 20px;">$1</h3>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+
+    const analysisHTML = `
+        <div style="background: white; padding: 20px; border-radius: 8px; line-height: 1.6;">
+            ${isFollowUp ? '<hr style="border: 1px solid #eee; margin: 20px 0;">' : ''}
+            <p>${formatted}</p>
+        </div>
+    `;
+
+    if (isFollowUp) {
+        contentDiv.innerHTML += analysisHTML;
+        // Scroll to bottom
+        contentDiv.scrollTop = contentDiv.scrollHeight;
+    } else {
+        contentDiv.innerHTML = analysisHTML;
+    }
+}
+
+// Send chat message
+async function sendAIChat() {
+    const input = document.getElementById('aiChatInput');
+    const question = input.value.trim();
+
+    if (!question) return;
+
+    if (!currentAIRaceNumber) {
+        alert('No race selected for analysis');
+        return;
+    }
+
+    // Clear input
+    input.value = '';
+
+    // Show user question
+    const contentDiv = document.getElementById('aiAnalysisContent');
+    contentDiv.innerHTML += `
+        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #2196f3;">
+            <strong style="color: #1976d2;">You asked:</strong> ${question}
+        </div>
+    `;
+
+    // Show loading
+    contentDiv.innerHTML += `
+        <div id="aiLoading" style="padding: 15px; text-align: center; color: #999;">
+            <em>Thinking...</em>
+        </div>
+    `;
+    contentDiv.scrollTop = contentDiv.scrollHeight;
+
+    // Build context with previous conversation
+    const race = drfData.races.find(r => r.raceNumber === currentAIRaceNumber);
+    const raceData = formatRaceDataForAI(race);
+
+    let contextPrompt = `Previous analysis for Race ${currentAIRaceNumber}:\n\n`;
+    contextPrompt += `RACE: ${raceData.race.distance} ${raceData.race.surface} - ${raceData.race.classification}\n`;
+    contextPrompt += `HORSES: ${raceData.horses.map(h => `${h.name} (#${h.programNumber}, ML: ${h.morningLine})`).join(', ')}\n\n`;
+    contextPrompt += `Follow-up question: ${question}\n\n`;
+    contextPrompt += `Provide a concise, specific answer based on the race data.`;
+
+    // Call AI
+    const result = await callGeminiAPI(contextPrompt, true);
+
+    // Remove loading
+    const loadingEl = document.getElementById('aiLoading');
+    if (loadingEl) loadingEl.remove();
+
+    if (result.error) {
+        contentDiv.innerHTML += `
+            <div style="background: #ffebee; padding: 15px; border-radius: 8px; border-left: 4px solid #f44336; margin-top: 10px;">
+                <strong style="color: #c62828;">Error:</strong> ${result.message}
+            </div>
+        `;
+    } else {
+        displayAIAnalysis(result.text, true);
+    }
+}
+
+// Quick question buttons
+function quickQuestion(question) {
+    document.getElementById('aiChatInput').value = question;
+    sendAIChat();
+}
+
+// Close AI Modal
+function closeAIModal() {
+    document.getElementById('aiModal').style.display = 'none';
+    currentAIRaceNumber = null;
+    aiConversationHistory = [];
+}
 
     </script>
 </body>
