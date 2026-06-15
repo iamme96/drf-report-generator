@@ -1706,6 +1706,42 @@ document.addEventListener('click', function(event) {
 let currentAIRaceNumber = null;
 let aiConversationHistory = [];
 
+// Discover available models for this API key
+async function discoverAvailableModels(apiKey) {
+    const apis = ['v1', 'v1beta'];
+
+    for (const api of apis) {
+        try {
+            const url = `https://generativelanguage.googleapis.com/${api}/models?key=${apiKey}`;
+            console.log(`Checking available models at ${api}...`);
+
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                console.log(`Available models (${api}):`, data);
+
+                // Extract model names that support generateContent
+                const models = data.models?.filter(m =>
+                    m.supportedGenerationMethods?.includes('generateContent')
+                ).map(m => ({
+                    name: m.name.replace('models/', ''),
+                    displayName: m.displayName,
+                    api: api
+                }));
+
+                if (models && models.length > 0) {
+                    console.log(`Found ${models.length} working models:`, models);
+                    return models;
+                }
+            }
+        } catch (error) {
+            console.warn(`Failed to list models for ${api}:`, error);
+        }
+    }
+
+    return null;
+}
+
 // Format race data for AI analysis
 function formatRaceDataForAI(race) {
     const raceInfo = {
@@ -1749,14 +1785,27 @@ async function callGeminiAPI(prompt, isFollowUp = false) {
         };
     }
 
-    // Try multiple model endpoints in order of preference
-    const modelsToTry = [
-        { name: 'gemini-1.5-flash', api: 'v1' },
-        { name: 'gemini-1.5-pro', api: 'v1' },
-        { name: 'gemini-pro', api: 'v1beta' },
-        { name: 'gemini-1.5-flash-latest', api: 'v1beta' },
-        { name: 'gemini-1.5-pro-latest', api: 'v1beta' }
-    ];
+    // First, try to discover available models if not already done
+    let modelsToTry = JSON.parse(localStorage.getItem('gemini_available_models') || 'null');
+
+    if (!modelsToTry) {
+        console.log('Discovering available models for your API key...');
+        modelsToTry = await discoverAvailableModels(apiKey);
+
+        if (modelsToTry && modelsToTry.length > 0) {
+            localStorage.setItem('gemini_available_models', JSON.stringify(modelsToTry));
+            console.log('Saved available models:', modelsToTry);
+        } else {
+            // Fallback to hardcoded list
+            modelsToTry = [
+                { name: 'gemini-1.5-flash', api: 'v1' },
+                { name: 'gemini-1.5-pro', api: 'v1' },
+                { name: 'gemini-pro', api: 'v1beta' },
+                { name: 'gemini-1.5-flash-latest', api: 'v1beta' },
+                { name: 'gemini-1.5-pro-latest', api: 'v1beta' }
+            ];
+        }
+    }
 
     let lastError = null;
 
