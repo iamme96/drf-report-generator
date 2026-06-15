@@ -1425,35 +1425,55 @@ const DEFAULT_COEFFICIENTS = {
     AVG_PAR: 0.110
 };
 
-// Cookie management functions
-function setCookie(name, value, days = 365) {
-    const date = new Date();
-    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-    const expires = "expires=" + date.toUTCString();
-    document.cookie = name + "=" + JSON.stringify(value) + ";" + expires + ";path=/";
+// Storage management functions (uses localStorage for better local file support)
+function saveToStorage(name, value) {
+    try {
+        // Try localStorage first (works with local files)
+        localStorage.setItem(name, JSON.stringify(value));
+
+        // Also save to cookie for server environments
+        const date = new Date();
+        date.setTime(date.getTime() + (365 * 24 * 60 * 60 * 1000));
+        const expires = "expires=" + date.toUTCString();
+        document.cookie = name + "=" + JSON.stringify(value) + ";" + expires + ";path=/";
+
+        return true;
+    } catch (e) {
+        console.error('Error saving to storage:', e);
+        return false;
+    }
 }
 
-function getCookie(name) {
-    const nameEQ = name + "=";
-    const ca = document.cookie.split(';');
-    for (let i = 0; i < ca.length; i++) {
-        let c = ca[i];
-        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-        if (c.indexOf(nameEQ) === 0) {
-            try {
+function getFromStorage(name) {
+    try {
+        // Try localStorage first
+        const localValue = localStorage.getItem(name);
+        if (localValue) {
+            return JSON.parse(localValue);
+        }
+
+        // Fall back to cookie
+        const nameEQ = name + "=";
+        const ca = document.cookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) === 0) {
                 return JSON.parse(c.substring(nameEQ.length, c.length));
-            } catch (e) {
-                return null;
             }
         }
+    } catch (e) {
+        console.error('Error reading from storage:', e);
     }
     return null;
 }
 
-// Load configuration from cookie or use defaults
+// Load configuration from storage or use defaults
 function loadConfiguration() {
-    const savedConfig = getCookie('drf_coefficients');
+    const savedConfig = getFromStorage('drf_coefficients');
     const coefficients = savedConfig || DEFAULT_COEFFICIENTS;
+
+    console.log('Loading configuration:', coefficients);
 
     // Update input fields
     Object.keys(coefficients).forEach(key => {
@@ -1511,7 +1531,7 @@ function updateCoefficientDisplay() {
     }
 }
 
-// Save configuration to cookie
+// Save configuration to storage
 function saveConfiguration() {
     const coefficients = {};
     const coefficientKeys = ['PR', 'MONEY_MR', 'JOCKEY_MR', 'TRAINER_MR', 'SPEED_MR', 'AVG_PAR'];
@@ -1532,13 +1552,14 @@ function saveConfiguration() {
         return;
     }
 
-    // Save to cookie
-    setCookie('drf_coefficients', coefficients);
+    // Save to storage
+    const saved = saveToStorage('drf_coefficients', coefficients);
 
-    // Update the global CORRELATION_COEFFICIENTS in drf-pdf-generator.js
-    if (window.DRFPDFGenerator) {
-        window.DRFPDFGenerator.CORRELATION_COEFFICIENTS = coefficients;
+    if (!saved) {
+        alert('⚠️ Warning: Could not save configuration. Settings will only apply to this session.');
     }
+
+    console.log('Saved configuration:', coefficients);
 
     alert('✅ Configuration saved successfully!\n\nNew coefficients will be used for all PR(C) calculations.');
     closeConfigModal();

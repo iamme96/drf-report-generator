@@ -31,21 +31,32 @@ const DEFAULT_CORRELATION_COEFFICIENTS = {
 };
 
 /**
- * Get correlation coefficients from cookie or use defaults
+ * Get correlation coefficients from localStorage/cookie or use defaults
  */
 function getCorrelationCoefficients() {
     try {
+        // Try localStorage first (works with local files)
+        const localValue = localStorage.getItem('drf_coefficients');
+        if (localValue) {
+            const coefficients = JSON.parse(localValue);
+            console.log('Using coefficients from localStorage:', coefficients);
+            return coefficients;
+        }
+
+        // Fall back to cookie
         const cookieValue = document.cookie
             .split('; ')
             .find(row => row.startsWith('drf_coefficients='));
 
         if (cookieValue) {
             const coefficients = JSON.parse(decodeURIComponent(cookieValue.split('=')[1]));
+            console.log('Using coefficients from cookie:', coefficients);
             return coefficients;
         }
     } catch (e) {
-        console.warn('Error loading coefficients from cookie, using defaults:', e);
+        console.warn('Error loading coefficients from storage, using defaults:', e);
     }
+    console.log('Using default coefficients:', DEFAULT_CORRELATION_COEFFICIENTS);
     return DEFAULT_CORRELATION_COEFFICIENTS;
 }
 
