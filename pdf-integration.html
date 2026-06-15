@@ -1839,9 +1839,13 @@ async function showAIAnalysis(raceNumber) {
         return;
     }
 
-    const race = drfData.races.find(r => r.raceNumber === raceNumber);
+    console.log('Looking for race:', raceNumber, 'Type:', typeof raceNumber);
+    console.log('Available races:', drfData.races.map(r => ({ num: r.raceNumber, type: typeof r.raceNumber })));
+
+    // Use == instead of === to handle string/number mismatch
+    const race = drfData.races.find(r => r.raceNumber == raceNumber);
     if (!race) {
-        alert('Race not found!');
+        alert(`Race ${raceNumber} not found!\n\nAvailable races: ${drfData.races.map(r => r.raceNumber).join(', ')}`);
         return;
     }
 
@@ -1953,7 +1957,7 @@ async function sendAIChat() {
     contentDiv.scrollTop = contentDiv.scrollHeight;
 
     // Build context with previous conversation
-    const race = drfData.races.find(r => r.raceNumber === currentAIRaceNumber);
+    const race = drfData.races.find(r => r.raceNumber == currentAIRaceNumber);
     const raceData = formatRaceDataForAI(race);
 
     let contextPrompt = `Previous analysis for Race ${currentAIRaceNumber}:\n\n`;
