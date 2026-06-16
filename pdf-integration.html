@@ -642,7 +642,7 @@
                 <div class="config-item" style="max-width: 100%;">
                     <label for="gemini_api_key">Google Gemini API Key</label>
                     <input type="password" id="gemini_api_key"
-                           placeholder="Enter your Gemini API key (starts with 'AIza...')"
+                           placeholder="Enter your Gemini API key (starts with 'AIza...' or 'AQ.Ab...')"
                            style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.95em; font-family: monospace;">
                     <small style="color: #999; display: block; margin-top: 8px;">
                         Your API key is stored locally and never sent to our servers.
@@ -650,6 +650,44 @@
                             Show/Hide
                         </button>
                     </small>
+                </div>
+            </div>
+
+            <!-- Google Search Grounding Section -->
+            <div class="config-section">
+                <h3 style="color: #667eea;">🔍 Google Search Grounding</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">
+                    Enhance AI analysis with real-time search data (trainer stats, track conditions, news).
+                    <a href="https://developers.google.com/custom-search/v1/introduction" target="_blank" style="color: #667eea;">Setup guide</a>
+                </p>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="config-item" style="max-width: 100%;">
+                        <label for="google_search_api_key">Google Search API Key</label>
+                        <input type="password" id="google_search_api_key"
+                               placeholder="AIzaSy..."
+                               style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.95em; font-family: monospace;">
+                        <small style="color: #999; display: block; margin-top: 8px;">
+                            100 free searches/day
+                        </small>
+                    </div>
+
+                    <div class="config-item" style="max-width: 100%;">
+                        <label for="google_search_engine_id">Search Engine ID</label>
+                        <input type="text" id="google_search_engine_id"
+                               placeholder="a1b2c3d4e5f6g..."
+                               style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 0.95em; font-family: monospace;">
+                        <small style="color: #999; display: block; margin-top: 8px;">
+                            From programmablesearchengine.google.com
+                        </small>
+                    </div>
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="enable_search_grounding" style="margin-right: 10px;">
+                        <span style="color: #333; font-weight: 600;">Enable Search Grounding (searches for trainer stats, track bias, recent news)</span>
+                    </label>
                 </div>
             </div>
 
@@ -1555,11 +1593,30 @@ function loadConfiguration() {
         }
     });
 
-    // Load API key
+    // Load Gemini API key
     const apiKey = localStorage.getItem('gemini_api_key') || '';
     const apiKeyInput = document.getElementById('gemini_api_key');
     if (apiKeyInput) {
         apiKeyInput.value = apiKey;
+    }
+
+    // Load Google Search API credentials
+    const searchApiKey = localStorage.getItem('google_search_api_key') || '';
+    const searchApiKeyInput = document.getElementById('google_search_api_key');
+    if (searchApiKeyInput) {
+        searchApiKeyInput.value = searchApiKey;
+    }
+
+    const searchEngineId = localStorage.getItem('google_search_engine_id') || '';
+    const searchEngineIdInput = document.getElementById('google_search_engine_id');
+    if (searchEngineIdInput) {
+        searchEngineIdInput.value = searchEngineId;
+    }
+
+    const searchEnabled = localStorage.getItem('enable_search_grounding') === 'true';
+    const searchEnabledCheckbox = document.getElementById('enable_search_grounding');
+    if (searchEnabledCheckbox) {
+        searchEnabledCheckbox.checked = searchEnabled;
     }
 
     updateCoefficientDisplay();
@@ -1642,11 +1699,30 @@ function saveConfiguration() {
     // Save coefficients to storage
     const saved = saveToStorage('drf_coefficients', coefficients);
 
-    // Save API key to localStorage
+    // Save Gemini API key to localStorage
     const apiKeyInput = document.getElementById('gemini_api_key');
     if (apiKeyInput && apiKeyInput.value.trim()) {
         localStorage.setItem('gemini_api_key', apiKeyInput.value.trim());
         console.log('Gemini API key saved');
+    }
+
+    // Save Google Search API credentials
+    const searchApiKeyInput = document.getElementById('google_search_api_key');
+    if (searchApiKeyInput && searchApiKeyInput.value.trim()) {
+        localStorage.setItem('google_search_api_key', searchApiKeyInput.value.trim());
+        console.log('Google Search API key saved');
+    }
+
+    const searchEngineIdInput = document.getElementById('google_search_engine_id');
+    if (searchEngineIdInput && searchEngineIdInput.value.trim()) {
+        localStorage.setItem('google_search_engine_id', searchEngineIdInput.value.trim());
+        console.log('Google Search Engine ID saved');
+    }
+
+    const searchEnabledCheckbox = document.getElementById('enable_search_grounding');
+    if (searchEnabledCheckbox) {
+        localStorage.setItem('enable_search_grounding', searchEnabledCheckbox.checked);
+        console.log('Search grounding enabled:', searchEnabledCheckbox.checked);
     }
 
     if (!saved) {
@@ -1698,6 +1774,188 @@ document.addEventListener('click', function(event) {
         closeAIModal();
     }
 });
+
+// ============================================
+// GOOGLE SEARCH GROUNDING FUNCTIONS
+// ============================================
+
+// Cache for search results to avoid duplicate queries
+const searchCache = {};
+
+// Perform Google Custom Search
+async function googleSearch(query) {
+    const apiKey = localStorage.getItem('google_search_api_key');
+    const searchEngineId = localStorage.getItem('google_search_engine_id');
+
+    if (!apiKey || !searchEngineId) {
+        console.warn('Google Search not configured');
+        return null;
+    }
+
+    // Check cache first
+    if (searchCache[query]) {
+        console.log(`Using cached result for: ${query}`);
+        return searchCache[query];
+    }
+
+    try {
+        const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${searchEngineId}&q=${encodeURIComponent(query)}&num=3`;
+        console.log(`Searching: ${query}`);
+
+        const response = await fetch(url);
+        if (!response.ok) {
+            console.warn(`Search failed for "${query}":`, response.status);
+            return null;
+        }
+
+        const data = await response.json();
+        const results = data.items?.slice(0, 3).map(item => ({
+            title: item.title,
+            snippet: item.snippet,
+            link: item.link
+        })) || [];
+
+        // Cache the result
+        searchCache[query] = results;
+
+        return results;
+    } catch (error) {
+        console.error(`Search error for "${query}":`, error);
+        return null;
+    }
+}
+
+// Generate search queries for a race
+function generateSearchQueries(race) {
+    const queries = [];
+    const trackName = race.trackCode || 'track';
+    const currentYear = new Date().getFullYear();
+
+    // Track bias and conditions
+    queries.push({
+        type: 'track_bias',
+        query: `${trackName} track bias ${currentYear}`
+    });
+
+    // Get unique trainers and jockeys (limit to top 3 by PR score)
+    const topHorses = [...race.horses]
+        .sort((a, b) => (parseFloat(b.prScore) || 0) - (parseFloat(a.prScore) || 0))
+        .slice(0, 3);
+
+    topHorses.forEach(horse => {
+        if (horse.trainerName && horse.trainerName !== 'Unknown') {
+            queries.push({
+                type: 'trainer',
+                horse: horse.horseName,
+                query: `"${horse.trainerName}" trainer win rate ${trackName} ${currentYear}`
+            });
+        }
+
+        if (horse.jockeyName && horse.jockeyName !== 'Unknown') {
+            queries.push({
+                type: 'jockey',
+                horse: horse.horseName,
+                query: `"${horse.jockeyName}" jockey statistics ${currentYear}`
+            });
+        }
+    });
+
+    // Class and distance analysis
+    if (race.classification) {
+        queries.push({
+            type: 'class',
+            query: `${race.classification} horse racing statistics`
+        });
+    }
+
+    return queries.slice(0, 6); // Limit to 6 searches per race
+}
+
+// Perform all searches for a race
+async function performRaceSearches(race) {
+    const enabled = localStorage.getItem('enable_search_grounding') === 'true';
+
+    if (!enabled) {
+        console.log('Search grounding is disabled');
+        return null;
+    }
+
+    const queries = generateSearchQueries(race);
+    console.log(`Performing ${queries.length} searches for race ${race.raceNumber}...`);
+
+    const searchResults = {};
+
+    for (const queryObj of queries) {
+        const results = await googleSearch(queryObj.query);
+        if (results && results.length > 0) {
+            if (!searchResults[queryObj.type]) {
+                searchResults[queryObj.type] = [];
+            }
+            searchResults[queryObj.type].push({
+                query: queryObj.query,
+                horse: queryObj.horse,
+                results: results
+            });
+        }
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    console.log('Search results:', searchResults);
+    return searchResults;
+}
+
+// Format search results for AI prompt
+function formatSearchResults(searchResults) {
+    if (!searchResults || Object.keys(searchResults).length === 0) {
+        return '';
+    }
+
+    let formatted = '\n\n=== REAL-TIME SEARCH DATA ===\n';
+
+    if (searchResults.track_bias) {
+        formatted += '\n📍 TRACK CONDITIONS & BIAS:\n';
+        searchResults.track_bias.forEach(search => {
+            search.results.forEach(r => {
+                formatted += `- ${r.snippet}\n`;
+            });
+        });
+    }
+
+    if (searchResults.trainer) {
+        formatted += '\n👨‍🏫 TRAINER INSIGHTS:\n';
+        searchResults.trainer.forEach(search => {
+            formatted += `\n${search.horse} - Trainer Stats:\n`;
+            search.results.forEach(r => {
+                formatted += `- ${r.snippet}\n`;
+            });
+        });
+    }
+
+    if (searchResults.jockey) {
+        formatted += '\n🏇 JOCKEY INSIGHTS:\n';
+        searchResults.jockey.forEach(search => {
+            formatted += `\n${search.horse} - Jockey Stats:\n`;
+            search.results.forEach(r => {
+                formatted += `- ${r.snippet}\n`;
+            });
+        });
+    }
+
+    if (searchResults.class) {
+        formatted += '\n💰 CLASS/CONDITION ANALYSIS:\n';
+        searchResults.class.forEach(search => {
+            search.results.forEach(r => {
+                formatted += `- ${r.snippet}\n`;
+            });
+        });
+    }
+
+    formatted += '\n=== END SEARCH DATA ===\n\n';
+    formatted += 'Use this real-time data to enhance your analysis, especially for trainer/jockey performance and track bias.\n\n';
+
+    return formatted;
+}
 
 // ============================================
 // AI ANALYSIS FUNCTIONS
@@ -1870,7 +2128,7 @@ async function callGeminiAPI(prompt, isFollowUp = false) {
 }
 
 // Generate AI prompt for initial race analysis
-function generateRaceAnalysisPrompt(raceData) {
+function generateRaceAnalysisPrompt(raceData, searchResults = null) {
     const { race, horses } = raceData;
 
     let prompt = `You are an expert horse racing handicapper. Analyze this race and provide detailed insights.
@@ -1894,6 +2152,11 @@ HORSES IN RACE:
    - Days Off: ${h.daysOff}
 `;
     });
+
+    // Add search results if available
+    if (searchResults) {
+        prompt += formatSearchResults(searchResults);
+    }
 
     prompt += `\n\nPLEASE PROVIDE:
 1. **Top Contenders** (3-5 horses with best win chances and why)
@@ -1935,17 +2198,35 @@ async function showAIAnalysis(raceNumber) {
 
     // Show loading state
     const contentDiv = document.getElementById('aiAnalysisContent');
+    const searchEnabled = localStorage.getItem('enable_search_grounding') === 'true';
+
     contentDiv.innerHTML = `
         <div style="text-align: center; padding: 40px;">
             <div style="font-size: 3em; margin-bottom: 20px;">🤖</div>
-            <div style="font-size: 1.2em; color: #667eea; margin-bottom: 10px;">Analyzing race data...</div>
-            <div style="color: #999;">This may take a few seconds...</div>
+            <div style="font-size: 1.2em; color: #667eea; margin-bottom: 10px;">
+                ${searchEnabled ? 'Searching for real-time data...' : 'Analyzing race data...'}
+            </div>
+            <div style="color: #999;">${searchEnabled ? 'Gathering track bias, trainer/jockey stats...' : 'This may take a few seconds...'}</div>
         </div>
     `;
 
-    // Format race data and generate prompt
+    // Perform Google searches if enabled
+    let searchResults = null;
+    if (searchEnabled) {
+        searchResults = await performRaceSearches(race);
+
+        contentDiv.innerHTML = `
+            <div style="text-align: center; padding: 40px;">
+                <div style="font-size: 3em; margin-bottom: 20px;">🤖</div>
+                <div style="font-size: 1.2em; color: #667eea; margin-bottom: 10px;">Analyzing with AI...</div>
+                <div style="color: #999;">Processing search results and race data...</div>
+            </div>
+        `;
+    }
+
+    // Format race data and generate prompt with search results
     const raceData = formatRaceDataForAI(race);
-    const prompt = generateRaceAnalysisPrompt(raceData);
+    const prompt = generateRaceAnalysisPrompt(raceData, searchResults);
 
     // Store initial prompt in history
     aiConversationHistory.push({ role: 'user', content: prompt });
