@@ -2002,13 +2002,51 @@ async function discoverAvailableModels(apiKey) {
 
 // Format race data for AI analysis
 function formatRaceDataForAI(race) {
+    // Get track name mapping (same as PDF generator)
+    const trackMapping = {
+        "DMR": "Del Mar", "DED": "Delta Downs", "AQU": "Aqueduct", "AP": "Arlington Park",
+        "BEL": "Belmont Park", "CD": "Churchill Downs", "SA": "Santa Anita Park",
+        "GP": "Gulfstream Park", "KEE": "Keeneland", "SAR": "Saratoga",
+        "OP": "Oaklawn Park", "FG": "Fair Grounds", "TAM": "Tampa Bay Downs"
+    };
+
+    // Get surface name mapping
+    const surfaceMapping = {
+        "D": "Dirt", "T": "Turf", "t": "Inner Turf",
+        "s": "Steeplechase", "h": "Hunt"
+    };
+
+    const trackCode = race.trackCode || '';
+    const trackName = trackMapping[trackCode.trim()] || trackCode;
+    const surfaceCode = race.surface || '';
+    const surfaceName = surfaceMapping[surfaceCode.trim()] || surfaceCode;
+
+    // Format date (YYYYMMDD to MM/DD/YYYY)
+    let formattedDate = race.date || '';
+    if (formattedDate && formattedDate.length === 8) {
+        const year = formattedDate.substring(0, 4);
+        const month = formattedDate.substring(4, 6);
+        const day = formattedDate.substring(6, 8);
+        formattedDate = `${month}/${day}/${year}`;
+    }
+
     const raceInfo = {
         raceNumber: race.raceNumber,
+        trackCode: trackCode,
+        trackName: trackName,
+        date: formattedDate,
         distance: race.distanceInFurlongs + 'F',
-        surface: race.surface,
+        distanceYards: race.distance || '',
+        surface: surfaceName,
+        surfaceCode: surfaceCode,
+        trackCondition: race.trackCondition || '',
         classification: race.classification,
+        raceType: race.raceType || '',
         purse: '$' + formatNumber(race.purse),
-        fieldSize: race.horses.length
+        fieldSize: race.horses.length,
+        postTime: race.postTime || '',
+        ageRestrictions: race.ageSexRestrictions || '',
+        speedPar: race.speedPar || ''
     };
 
     const horsesData = race.horses.map((horse, index) => {
@@ -2016,16 +2054,20 @@ function formatRaceDataForAI(race) {
             position: index + 1,
             name: horse.horseName || 'Unknown',
             programNumber: horse.programNumber || (index + 1),
+            postPosition: horse.postPosition || '',
             morningLine: horse.morningLineOdds || 'N/A',
             powerRating: horse.powerRating || 'N/A',
             prScore: horse.prScore || 'N/A',
             jockey: horse.jockeyName || 'Unknown',
             trainer: horse.trainerName || 'Unknown',
+            owner: horse.ownerName || '',
             bestSpeed: horse.bestSpeedLife || 'N/A',
             recentSpeed: horse.bestSpeedMostRecentYear || 'N/A',
             runStyle: horse.brisRunStyle || 'Unknown',
             daysOff: horse.daysSinceLastRace || 'N/A',
-            lastRaceDate: horse.lastRaceDate || 'N/A'
+            lastRaceDate: horse.lastRaceDate || 'N/A',
+            medication: horse.medication || '',
+            weight: horse.weight || ''
         };
     });
 
@@ -2131,25 +2173,35 @@ async function callGeminiAPI(prompt, isFollowUp = false) {
 function generateRaceAnalysisPrompt(raceData, searchResults = null) {
     const { race, horses } = raceData;
 
-    let prompt = `You are an expert horse racing handicapper. Analyze this race and provide detailed insights.
+    let prompt = `You are an expert horse racing handicapper. Analyze this race and provide detailed, actionable insights.
 
-RACE INFORMATION:
-- Race ${race.raceNumber}: ${race.distance} ${race.surface}
-- Class: ${race.classification}
-- Purse: ${race.purse}
-- Field Size: ${race.fieldSize} horses
+=== RACE DETAILS ===
+Track: ${race.trackName} (${race.trackCode})
+Date: ${race.date}
+Race #: ${race.raceNumber}${race.postTime ? ' - Post Time: ' + race.postTime : ''}
+Distance: ${race.distance} (${race.distanceYards} yards)
+Surface: ${race.surface}${race.trackCondition ? ' - Track Condition: ' + race.trackCondition : ''}
+Class: ${race.classification}${race.raceType ? ' (' + race.raceType + ')' : ''}
+Purse: ${race.purse}
+Field Size: ${race.fieldSize} horses
+${race.ageRestrictions ? 'Age/Sex Restrictions: ' + race.ageRestrictions : ''}
+${race.speedPar ? 'Speed Par: ' + race.speedPar : ''}
 
-HORSES IN RACE:
+=== HORSES IN RACE ===
 `;
 
     horses.forEach(h => {
-        prompt += `\n${h.position}. ${h.name} (#${h.programNumber})
-   - ML Odds: ${h.morningLine}
-   - Power Rating: ${h.powerRating} | PR(C) Score: ${h.prScore}
-   - Jockey: ${h.jockey} | Trainer: ${h.trainer}
-   - Speed: Best=${h.bestSpeed}, Recent=${h.recentSpeed}
-   - Run Style: ${h.runStyle}
-   - Days Off: ${h.daysOff}
+        prompt += `
+${h.position}. ${h.name} (PP #${h.postPosition || h.programNumber})
+   ML Odds: ${h.morningLine}
+   Power Rating: ${h.powerRating} | PR(C) Score: ${h.prScore}
+   Jockey: ${h.jockey} | Trainer: ${h.trainer}
+   Speed Figures: Best=${h.bestSpeed}, Recent=${h.recentSpeed}
+   Running Style: ${h.runStyle}
+   Days Since Last Race: ${h.daysOff}
+   Last Race Date: ${h.lastRaceDate}
+   ${h.weight ? 'Weight: ' + h.weight + ' lbs' : ''}${h.medication ? ' | Medication: ' + h.medication : ''}
+   ${h.owner ? 'Owner: ' + h.owner : ''}
 `;
     });
 
@@ -2158,15 +2210,49 @@ HORSES IN RACE:
         prompt += formatSearchResults(searchResults);
     }
 
-    prompt += `\n\nPLEASE PROVIDE:
-1. **Top Contenders** (3-5 horses with best win chances and why)
-2. **Value Plays** (horses whose odds don't match their chances)
-3. **Pace Analysis** (expected pace scenario and which running styles benefit)
-4. **Key Factors** (critical race dynamics - distance, class, form, etc.)
-5. **Betting Strategy** (suggested win/place/show and exotic plays)
-6. **Horses to Eliminate** (and why they're unlikely to hit the board)
+    prompt += `
 
-Be specific, data-driven, and concise. Focus on actionable handicapping insights.`;
+=== ANALYSIS REQUESTED ===
+
+Please provide a comprehensive handicapping analysis with the following sections:
+
+1. **🏆 Top Contenders (3-5 horses)**
+   - Rank order by win probability
+   - Detailed reasoning for each selection
+   - Key factors supporting each pick
+
+2. **💰 Value Plays & Overlays**
+   - Horses whose actual chances exceed their morning line odds
+   - Why the public/oddsmaker may be underestimating them
+   - Potential payout opportunities
+
+3. **🏃 Pace Analysis**
+   - Expected pace scenario (speed duel, slow pace, honest pace)
+   - Which running styles will benefit based on pace
+   - Early speed vs closers advantage
+   - Impact of track condition on pace
+
+4. **🎯 Key Race Factors**
+   - Distance considerations (stretching out, cutting back)
+   - Class analysis (drops, rises)
+   - Form trends (improving, declining)
+   - Track bias implications
+   - Trainer/jockey patterns
+   - Speed figure analysis
+
+5. **💵 Betting Strategy**
+   - Top WIN bet
+   - PLACE/SHOW considerations
+   - EXACTA combinations (2-3 best)
+   - TRIFECTA suggestions
+   - SUPERFECTA if applicable
+
+6. **❌ Horses to Eliminate**
+   - Horses unlikely to hit the board
+   - Specific reasons for elimination
+   - Why they're overbet or outmatched
+
+Be specific, data-driven, and reference actual statistics from the race data and search results. Focus on actionable insights a handicapper can use to make betting decisions.`;
 
     return prompt;
 }
